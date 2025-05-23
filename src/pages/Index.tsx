@@ -22,7 +22,10 @@ const Index = () => {
             </div>
             
             <div className="flex items-center space-x-3">
-              <Link to="/dashboard">
+              <Link to="/auth/sign-in">
+                <Button variant="outline">Sign in</Button>
+              </Link>
+              <Link to="/auth/sign-up">
                 <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">Get Started</Button>
               </Link>
             </div>
@@ -35,13 +38,13 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-tabby-primary font-outfit">
-              Revolutionize Debate<br />Tournament Management
+              Debate Smarter, Not Harder
             </h1>
             <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
-              TabbyAI combines powerful tabulation tools with AI-assisted features to make your debate tournaments run smoother than ever before.
+              TabbyAI is your ultimate debate tournament companion — where AI meets argumentation, and POIs never go unanswered.
             </p>
             <div className="mt-10">
-              <Link to="/dashboard">
+              <Link to="/auth/sign-up">
                 <Button size="lg" className="bg-tabby-secondary hover:bg-tabby-secondary/90 text-white font-medium px-8 py-3 rounded-md">
                   Start Your Tournament
                 </Button>
@@ -69,9 +72,9 @@ const Index = () => {
       <section id="features" className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-tabby-primary font-outfit">Cutting-Edge Features</h2>
+            <h2 className="text-3xl font-bold text-tabby-primary font-outfit">No More Points of Information Needed</h2>
             <p className="mt-4 text-gray-600 max-w-2xl mx-auto">
-              TabbyAI offers powerful tools designed specifically for debate tournament organizers.
+              TabbyAI has all the answers to your tournament organization questions.
             </p>
           </div>
           
@@ -80,9 +83,9 @@ const Index = () => {
               <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-tabby-secondary/10 text-tabby-secondary">
                 <Trophy className="h-6 w-6" />
               </div>
-              <h3 className="mt-6 text-lg font-medium">Multiple Formats</h3>
+              <h3 className="mt-6 text-lg font-medium">AI-Powered Draws</h3>
               <p className="mt-2 text-gray-500 text-sm">
-                Support for BP, WSDC, and other major debate formats with customizable rules.
+                Generate fair and balanced draws faster than you can say "That's a matter of definition."
               </p>
             </div>
             
@@ -90,9 +93,9 @@ const Index = () => {
               <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-tabby-secondary/10 text-tabby-secondary">
                 <Users className="h-6 w-6" />
               </div>
-              <h3 className="mt-6 text-lg font-medium">Team Management</h3>
+              <h3 className="mt-6 text-lg font-medium">Smart Team Management</h3>
               <p className="mt-2 text-gray-500 text-sm">
-                Easily register teams, track speaker scores, and manage judge allocations.
+                Keep track of teams and judges with the precision of a timekeeper's stopwatch.
               </p>
             </div>
             
@@ -100,9 +103,9 @@ const Index = () => {
               <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-tabby-secondary/10 text-tabby-secondary">
                 <Calendar className="h-6 w-6" />
               </div>
-              <h3 className="mt-6 text-lg font-medium">Schedule Optimization</h3>
+              <h3 className="mt-6 text-lg font-medium">Scheduling Magic</h3>
               <p className="mt-2 text-gray-500 text-sm">
-                AI-powered scheduling to minimize conflicts and optimize room allocations.
+                End scheduling debates with intelligent room allocation — no more "on the balance of probabilities."
               </p>
             </div>
             
@@ -110,10 +113,179 @@ const Index = () => {
               <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-tabby-secondary/10 text-tabby-secondary">
                 <BarChart3 className="h-6 w-6" />
               </div>
-              <h3 className="mt-6 text-lg font-medium">Results Analysis</h3>
+              <h3 className="mt-6 text-lg font-medium">Performance Analytics</h3>
               <p className="mt-2 text-gray-500 text-sm">
-                Comprehensive analytics and visualizations for tournament results and speaker performances.
+                Get speaker statistics so detailed, not even an opposition rebuttal could poke holes in them.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Pricing Section */}
+      <section id="pricing" className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-tabby-primary font-outfit">Simple, Transparent Pricing</h2>
+            <p className="mt-4 text-gray-600 max-w-2xl mx-auto">
+              No hidden fees — we're more transparent than a first prop's case structure.
+            </p>
+          </div>
+          
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Free Plan */}
+            <div className="bg-white rounded-lg shadow-md p-8 border border-gray-200">
+              <h3 className="text-lg font-bold text-tabby-primary">Novice</h3>
+              <div className="mt-4">
+                <span className="text-4xl font-bold">Free</span>
+              </div>
+              <p className="mt-2 text-sm text-gray-500">For small community tournaments</p>
+              
+              <ul className="mt-6 space-y-4">
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Up to 10 teams</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Basic draw generation</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Standard results reporting</p>
+                </li>
+              </ul>
+              
+              <div className="mt-8">
+                <Link to="/auth/sign-up">
+                  <Button variant="outline" className="w-full">Get Started</Button>
+                </Link>
+              </div>
+            </div>
+            
+            {/* Pro Plan */}
+            <div className="bg-white rounded-lg shadow-md p-8 border-2 border-tabby-secondary relative">
+              <div className="absolute top-0 right-0 -mt-3 mr-3 bg-tabby-secondary text-white py-1 px-4 rounded-full text-xs font-bold">
+                POPULAR
+              </div>
+              <h3 className="text-lg font-bold text-tabby-primary">Open Break</h3>
+              <div className="mt-4">
+                <span className="text-4xl font-bold">$49</span>
+                <span className="text-gray-500 ml-1">/tournament</span>
+              </div>
+              <p className="mt-2 text-sm text-gray-500">For regional tournaments</p>
+              
+              <ul className="mt-6 space-y-4">
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Up to 50 teams</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">AI-powered team matching</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Advanced analytics</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Automated notifications</p>
+                </li>
+              </ul>
+              
+              <div className="mt-8">
+                <Link to="/auth/sign-up">
+                  <Button className="w-full bg-tabby-secondary hover:bg-tabby-secondary/90">Get Started</Button>
+                </Link>
+              </div>
+            </div>
+            
+            {/* Enterprise Plan */}
+            <div className="bg-white rounded-lg shadow-md p-8 border border-gray-200">
+              <h3 className="text-lg font-bold text-tabby-primary">World Finals</h3>
+              <div className="mt-4">
+                <span className="text-4xl font-bold">$99</span>
+                <span className="text-gray-500 ml-1">/tournament</span>
+              </div>
+              <p className="mt-2 text-sm text-gray-500">For national championships</p>
+              
+              <ul className="mt-6 space-y-4">
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Unlimited teams</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Full AI-powered features</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Custom tournament branding</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Priority support</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="ml-3 text-sm text-gray-700">Crypto payment options</p>
+                </li>
+              </ul>
+              
+              <div className="mt-8">
+                <Link to="/auth/sign-up">
+                  <Button variant="outline" className="w-full">Contact Sales</Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -123,14 +295,14 @@ const Index = () => {
       <section className="bg-tabby-primary py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-white font-outfit">Ready to transform your debate tournaments?</h2>
+            <h2 className="text-3xl font-bold text-white font-outfit">Ready to make your next tournament a first-place proposition?</h2>
             <p className="mt-4 text-gray-300 max-w-2xl mx-auto">
-              Join hundreds of debate organizations already using TabbyAI to run successful tournaments.
+              Join the debate community already using TabbyAI and leave the procedural points to us.
             </p>
             <div className="mt-10">
-              <Link to="/dashboard">
+              <Link to="/auth/sign-up">
                 <Button size="lg" className="bg-tabby-secondary hover:bg-tabby-secondary/90 text-white font-medium px-8 py-3 rounded-md">
-                  Get Started for Free
+                  Register for Free
                 </Button>
               </Link>
             </div>

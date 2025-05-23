@@ -1,6 +1,6 @@
 
 import { useState, ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   Home, 
   Trophy, 
@@ -10,10 +10,25 @@ import {
   Settings,
   Menu,
   X,
-  BrainCircuit
+  BrainCircuit,
+  LogOut,
+  User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
+import { signOut } from "@/lib/auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -28,6 +43,29 @@ interface SidebarItem {
 const MainLayout = ({ children }: MainLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+        
+      if (error) {
+        console.error("Error fetching profile:", error);
+        throw error;
+      }
+      
+      return data;
+    },
+    enabled: !!user?.id,
+  });
   
   const sidebarItems: SidebarItem[] = [
     { name: "Dashboard", path: "/dashboard", icon: Home },
@@ -37,6 +75,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
+  };
+  
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
   };
   
   return (
@@ -78,6 +121,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                   ? "bg-tabby-secondary text-white"
                   : "text-gray-300 hover:bg-tabby-primary-foreground/10"
               )}
+              onClick={() => setSidebarOpen(false)}
             >
               <item.icon className="mr-3 h-5 w-5" aria-hidden="true" />
               {item.name}
@@ -105,6 +149,47 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         "flex-1 transition-all duration-300",
         sidebarOpen ? "lg:ml-64" : "ml-0 lg:ml-64"
       )}>
+        {/* Header with user dropdown */}
+        <header className="bg-white shadow-sm p-4">
+          <div className="flex justify-end items-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
+                    <AvatarFallback className="bg-tabby-secondary text-white">
+                      {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium">{profile?.full_name}</p>
+                    <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="cursor-pointer flex w-full items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="cursor-pointer"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+        
         <main className="min-h-screen p-4 md:p-8">
           {children}
         </main>
