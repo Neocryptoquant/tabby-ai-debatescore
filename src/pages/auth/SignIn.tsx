@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { BrainCircuit, Github, Mail } from "lucide-react";
+import { BrainCircuit, Mail } from "lucide-react";
 import { signInWithPassword, signInWithProvider } from "@/lib/auth";
 
 const formSchema = z.object({
@@ -33,7 +33,10 @@ const SignIn = () => {
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
-      const { success } = await signInWithPassword(values);
+      const { success } = await signInWithPassword({
+        email: values.email,
+        password: values.password
+      });
       if (success) {
         navigate("/dashboard");
       }
@@ -42,10 +45,10 @@ const SignIn = () => {
     }
   };
   
-  const handleSocialLogin = async (provider: 'github' | 'google') => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      await signInWithProvider(provider);
+      await signInWithProvider('google');
     } finally {
       setIsLoading(false);
     }
@@ -70,20 +73,11 @@ const SignIn = () => {
           </CardHeader>
           
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => handleSocialLogin('github')}
-                disabled={isLoading}
-              >
-                <Github className="mr-2 h-4 w-4" />
-                GitHub
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => handleSocialLogin('google')}
+                onClick={handleGoogleLogin}
                 disabled={isLoading}
               >
                 <Mail className="mr-2 h-4 w-4" />

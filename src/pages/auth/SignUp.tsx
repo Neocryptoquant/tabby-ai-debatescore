@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { BrainCircuit, Github, Mail } from "lucide-react";
+import { BrainCircuit, Mail } from "lucide-react";
 import { signUpWithPassword, signInWithProvider } from "@/lib/auth";
 
 const formSchema = z.object({
@@ -37,9 +37,14 @@ const SignUp = () => {
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
-      const { success } = await signUpWithPassword(values);
+      const { success } = await signUpWithPassword({
+        email: values.email,
+        password: values.password,
+        full_name: values.full_name,
+        institution: values.institution
+      });
       if (success) {
-        // Optionally redirect to a confirmation page
+        // Redirect to confirmation page
         navigate("/auth/confirmation");
       }
     } finally {
@@ -47,10 +52,10 @@ const SignUp = () => {
     }
   };
   
-  const handleSocialLogin = async (provider: 'github' | 'google') => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      await signInWithProvider(provider);
+      await signInWithProvider('google');
     } finally {
       setIsLoading(false);
     }
@@ -75,20 +80,11 @@ const SignUp = () => {
           </CardHeader>
           
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => handleSocialLogin('github')}
-                disabled={isLoading}
-              >
-                <Github className="mr-2 h-4 w-4" />
-                GitHub
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => handleSocialLogin('google')}
+                onClick={handleGoogleLogin}
                 disabled={isLoading}
               >
                 <Mail className="mr-2 h-4 w-4" />
