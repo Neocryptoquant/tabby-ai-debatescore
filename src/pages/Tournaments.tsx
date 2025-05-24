@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Search, Filter, Trophy } from "lucide-react";
@@ -177,9 +176,9 @@ const Tournaments = () => {
         </TabsList>
         
         <TabsContent value="all" className="space-y-6">
-          {filteredTournaments(tournaments).length > 0 ? (
+          {filteredTournaments(allFormattedTournaments).length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTournaments(tournaments).map((tournament) => (
+              {filteredTournaments(allFormattedTournaments).map((tournament) => (
                 <TournamentCard 
                   key={tournament.id}
                   {...tournament}
