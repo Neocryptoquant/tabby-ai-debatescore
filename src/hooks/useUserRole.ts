@@ -19,14 +19,37 @@ export function useUserRole() {
       }
 
       try {
-        const { data, error } = await supabase
-          .rpc('get_user_role', { _user_id: user.id });
+        console.log('Fetching role for user:', user.id);
+        
+        // First check if user has any role
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
 
-        if (error) {
-          console.error('Error fetching user role:', error);
-          setRole('attendee'); // Default fallback
+        if (roleError) {
+          console.error('Error fetching user role:', roleError);
+          
+          // If no role exists, create one
+          if (roleError.code === 'PGRST116') {
+            console.log('No role found, creating attendee role for user');
+            const { error: insertError } = await supabase
+              .from('user_roles')
+              .insert({ user_id: user.id, role: 'attendee' });
+            
+            if (insertError) {
+              console.error('Error creating role:', insertError);
+              setRole('attendee'); // Default fallback
+            } else {
+              setRole('attendee');
+            }
+          } else {
+            setRole('attendee'); // Default fallback
+          }
         } else {
-          setRole(data || 'attendee');
+          console.log('User role found:', roleData.role);
+          setRole(roleData.role);
         }
       } catch (error) {
         console.error('Error fetching user role:', error);
@@ -45,6 +68,8 @@ export function useUserRole() {
   const isTabMaster = role === 'tab_master';
   const isAssistant = role === 'assistant';
   const isAttendee = role === 'attendee';
+
+  console.log('Current user role state:', { role, canCreateTournaments, isLoading });
 
   return {
     role,

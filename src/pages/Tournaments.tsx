@@ -23,6 +23,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { RoleManager } from "@/components/admin/RoleManager";
 
 type Tournament = {
   id: string;
@@ -133,6 +134,11 @@ const Tournaments = () => {
           ) : null
         }
       />
+      
+      {/* Temporary Role Manager - Remove this after assigning your role */}
+      {!canCreateTournaments && (
+        <RoleManager />
+      )}
       
       {/* Filters and Search */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
