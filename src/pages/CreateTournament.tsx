@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -17,6 +16,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { AIAssistant } from "@/components/ai/AIAssistant";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Card,
   CardContent,
@@ -33,17 +35,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
 
 const CreateTournament = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { canCreateTournaments, isLoading: roleLoading } = useUserRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -57,6 +55,24 @@ const CreateTournament = () => {
     motionsPerRound: "",
     useAI: true,
   });
+
+  // Redirect if user cannot create tournaments
+  if (!roleLoading && !canCreateTournaments && user) {
+    toast.error("You don't have permission to create tournaments");
+    navigate("/tournaments");
+    return null;
+  }
+
+  // Show loading while checking permissions
+  if (roleLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-tabby-secondary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -67,16 +83,54 @@ const CreateTournament = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast.error("You must be logged in to create a tournament");
+      return;
+    }
+
+    if (!canCreateTournaments) {
+      toast.error("You don't have permission to create tournaments");
+      return;
+    }
+
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const { data, error } = await supabase
+        .from('tournaments')
+        .insert({
+          name: formData.name,
+          format: formData.format,
+          start_date: formData.startDate || null,
+          end_date: formData.endDate || null,
+          location: formData.location || null,
+          description: formData.description || null,
+          team_count: formData.teamCount ? parseInt(formData.teamCount) : null,
+          round_count: formData.roundCount ? parseInt(formData.roundCount) : null,
+          motions_per_round: formData.motionsPerRound ? parseInt(formData.motionsPerRound) : 1,
+          created_by: user.id,
+          status: 'upcoming'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Tournament creation error:', error);
+        toast.error("Failed to create tournament. Please try again.");
+        return;
+      }
+
       toast.success("Tournament created successfully!");
-      navigate("/tournaments");
-    }, 1500);
+      navigate(`/tournaments/${data.id}`);
+    } catch (error) {
+      console.error('Tournament creation error:', error);
+      toast.error("Failed to create tournament. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (

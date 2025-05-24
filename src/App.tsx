@@ -47,45 +47,47 @@ const App = () => (
             <Route path="/auth/confirmation" element={<Confirmation />} />
             <Route path="/auth/callback" element={<Callback />} />
             
-            {/* Protected Routes */}
+            {/* Routes accessible to everyone (including attendees) */}
+            <Route path="/tournaments" element={
+              <ProtectedRoute requireAuth={false}>
+                <Tournaments />
+              </ProtectedRoute>
+            } />
+            <Route path="/tournaments/:id" element={
+              <ProtectedRoute requireAuth={false}>
+                <TournamentDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/tournaments/:id/teams" element={
+              <ProtectedRoute requireAuth={false}>
+                <Teams />
+              </ProtectedRoute>
+            } />
+            <Route path="/tournaments/:id/rounds" element={
+              <ProtectedRoute requireAuth={false}>
+                <Rounds />
+              </ProtectedRoute>
+            } />
+            <Route path="/tournaments/:id/results" element={
+              <ProtectedRoute requireAuth={false}>
+                <Results />
+              </ProtectedRoute>
+            } />
+            <Route path="/tournaments/:id/analysis" element={
+              <ProtectedRoute requireAuth={false}>
+                <AIAnalysis />
+              </ProtectedRoute>
+            } />
+            
+            {/* Routes that require authentication */}
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
             } />
-            <Route path="/tournaments" element={
-              <ProtectedRoute>
-                <Tournaments />
-              </ProtectedRoute>
-            } />
             <Route path="/tournaments/create" element={
               <ProtectedRoute>
                 <CreateTournament />
-              </ProtectedRoute>
-            } />
-            <Route path="/tournaments/:id" element={
-              <ProtectedRoute>
-                <TournamentDetail />
-              </ProtectedRoute>
-            } />
-            <Route path="/tournaments/:id/teams" element={
-              <ProtectedRoute>
-                <Teams />
-              </ProtectedRoute>
-            } />
-            <Route path="/tournaments/:id/rounds" element={
-              <ProtectedRoute>
-                <Rounds />
-              </ProtectedRoute>
-            } />
-            <Route path="/tournaments/:id/results" element={
-              <ProtectedRoute>
-                <Results />
-              </ProtectedRoute>
-            } />
-            <Route path="/tournaments/:id/analysis" element={
-              <ProtectedRoute>
-                <AIAnalysis />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={

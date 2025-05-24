@@ -39,15 +39,97 @@ export type Database = {
         }
         Relationships: []
       }
+      tournaments: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          format: string | null
+          id: string
+          location: string | null
+          motions_per_round: number | null
+          name: string
+          round_count: number | null
+          start_date: string | null
+          status: string | null
+          team_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          format?: string | null
+          id?: string
+          location?: string | null
+          motions_per_round?: number | null
+          name: string
+          round_count?: number | null
+          start_date?: string | null
+          status?: string | null
+          team_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          format?: string | null
+          id?: string
+          location?: string | null
+          motions_per_round?: number | null
+          name?: string
+          round_count?: number | null
+          start_date?: string | null
+          status?: string | null
+          team_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "tab_master" | "assistant" | "attendee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -162,6 +244,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["tab_master", "assistant", "attendee"],
+    },
   },
 } as const

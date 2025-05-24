@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Search, Filter, Trophy } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TournamentCard } from "@/components/cards/TournamentCard";
 import { AIAssistant } from "@/components/ai/AIAssistant";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -22,54 +25,81 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 
+type Tournament = {
+  id: string;
+  name: string;
+  format: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  team_count: number | null;
+  location: string | null;
+  status: string | null;
+};
+
 const Tournaments = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { canCreateTournaments } = useUserRole();
   
-  // Mock data - would come from API in real app
-  const tournaments = [
-    {
-      id: "1",
-      name: "Global Debate Championship",
-      format: "BP",
-      date: "May 25-27, 2025",
-      teamCount: 32,
-      location: "London, UK",
-      status: "active" as const,
-    },
-    {
-      id: "2",
-      name: "Regional Schools Competition",
-      format: "WSDC",
-      date: "June 10-12, 2025",
-      teamCount: 16,
-      location: "New York, USA",
-      status: "upcoming" as const,
-    },
-    {
-      id: "3",
-      name: "University Invitational",
-      format: "BP",
-      date: "April 15-17, 2025",
-      teamCount: 24,
-      location: "Toronto, Canada",
-      status: "completed" as const,
-    },
-    {
-      id: "4",
-      name: "National Debate League Finals",
-      format: "WSDC",
-      date: "March 3-5, 2025",
-      teamCount: 8,
-      location: "Sydney, Australia",
-      status: "completed" as const,
+  useEffect(() => {
+    fetchTournaments();
+  }, []);
+
+  const fetchTournaments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching tournaments:', error);
+        toast.error("Failed to load tournaments");
+        return;
+      }
+
+      setTournaments(data || []);
+    } catch (error) {
+      console.error('Error fetching tournaments:', error);
+      toast.error("Failed to load tournaments");
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  const formatTournamentData = (tournament: Tournament) => {
+    const formatDate = (dateStr: string | null) => {
+      if (!dateStr) return "TBD";
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric' 
+      });
+    };
+
+    const startDate = formatDate(tournament.start_date);
+    const endDate = formatDate(tournament.end_date);
+    const dateRange = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+
+    return {
+      id: tournament.id,
+      name: tournament.name,
+      format: tournament.format?.toUpperCase() || "TBD",
+      date: dateRange,
+      teamCount: tournament.team_count || 0,
+      location: tournament.location || "TBD",
+      status: (tournament.status as "active" | "upcoming" | "completed") || "upcoming",
+    };
+  };
   
-  const activeTournaments = tournaments.filter(t => t.status === "active");
-  const upcomingTournaments = tournaments.filter(t => t.status === "upcoming");
-  const completedTournaments = tournaments.filter(t => t.status === "completed");
+  const activeTournaments = tournaments.filter(t => t.status === "active").map(formatTournamentData);
+  const upcomingTournaments = tournaments.filter(t => t.status === "upcoming").map(formatTournamentData);
+  const completedTournaments = tournaments.filter(t => t.status === "completed").map(formatTournamentData);
+  const allFormattedTournaments = tournaments.map(formatTournamentData);
   
-  const filteredTournaments = (items: typeof tournaments) => {
+  const filteredTournaments = (items: ReturnType<typeof formatTournamentData>[]) => {
     if (!searchQuery) return items;
     return items.filter(t => 
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -77,6 +107,16 @@ const Tournaments = () => {
       t.format.toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-tabby-secondary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
   
   return (
     <MainLayout>
@@ -84,12 +124,14 @@ const Tournaments = () => {
         title="Tournaments"
         description="Manage all your debate tournaments"
         actions={
-          <Link to="/tournaments/create">
-            <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
-              <Plus className="h-4 w-4 mr-2" />
-              New Tournament
-            </Button>
-          </Link>
+          canCreateTournaments ? (
+            <Link to="/tournaments/create">
+              <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
+                <Plus className="h-4 w-4 mr-2" />
+                New Tournament
+              </Button>
+            </Link>
+          ) : null
         }
       />
       
