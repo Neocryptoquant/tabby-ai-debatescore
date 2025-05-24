@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -14,6 +15,7 @@ import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { AIAssistant } from "@/components/ai/AIAssistant";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,9 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  FormLabel,
-} from "@/components/ui/form";
 
 const CreateTournament = () => {
   const navigate = useNavigate();
@@ -160,7 +159,7 @@ const CreateTournament = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <FormLabel htmlFor="name">Tournament Name</FormLabel>
+                  <Label htmlFor="name">Tournament Name</Label>
                   <Input
                     id="name"
                     name="name"
@@ -173,7 +172,7 @@ const CreateTournament = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <FormLabel htmlFor="format">Debate Format</FormLabel>
+                    <Label htmlFor="format">Debate Format</Label>
                     <Select 
                       name="format" 
                       value={formData.format}
@@ -193,7 +192,7 @@ const CreateTournament = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <FormLabel htmlFor="location">Location</FormLabel>
+                    <Label htmlFor="location">Location</Label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
@@ -210,7 +209,7 @@ const CreateTournament = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <FormLabel htmlFor="startDate">Start Date</FormLabel>
+                    <Label htmlFor="startDate">Start Date</Label>
                     <div className="relative">
                       <CalendarDays className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
@@ -225,7 +224,7 @@ const CreateTournament = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <FormLabel htmlFor="endDate">End Date</FormLabel>
+                    <Label htmlFor="endDate">End Date</Label>
                     <div className="relative">
                       <CalendarDays className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
@@ -241,7 +240,7 @@ const CreateTournament = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <FormLabel htmlFor="description">Description</FormLabel>
+                  <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
                     name="description"
@@ -263,7 +262,7 @@ const CreateTournament = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <FormLabel htmlFor="teamCount">Number of Teams</FormLabel>
+                    <Label htmlFor="teamCount">Number of Teams</Label>
                     <div className="relative">
                       <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
@@ -279,7 +278,7 @@ const CreateTournament = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <FormLabel htmlFor="roundCount">Number of Rounds</FormLabel>
+                    <Label htmlFor="roundCount">Number of Rounds</Label>
                     <div className="relative">
                       <Layers className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
@@ -295,7 +294,7 @@ const CreateTournament = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <FormLabel htmlFor="motionsPerRound">Motions per Round</FormLabel>
+                    <Label htmlFor="motionsPerRound">Motions per Round</Label>
                     <div className="relative">
                       <Award className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
