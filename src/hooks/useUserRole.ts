@@ -21,7 +21,7 @@ export function useUserRole() {
       try {
         console.log('Fetching role for user:', user.id);
         
-        // First check if user has any role
+        // Check if user has any role
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
@@ -31,21 +31,13 @@ export function useUserRole() {
         if (roleError) {
           console.error('Error fetching user role:', roleError);
           
-          // If no role exists, create one
+          // If no role exists (PGRST116 = no rows returned), don't create one automatically
           if (roleError.code === 'PGRST116') {
-            console.log('No role found, creating attendee role for user');
-            const { error: insertError } = await supabase
-              .from('user_roles')
-              .insert({ user_id: user.id, role: 'attendee' });
-            
-            if (insertError) {
-              console.error('Error creating role:', insertError);
-              setRole('attendee'); // Default fallback
-            } else {
-              setRole('attendee');
-            }
+            console.log('No role found for user - user needs to be assigned a role');
+            setRole(null);
           } else {
-            setRole('attendee'); // Default fallback
+            console.error('Database error:', roleError);
+            setRole(null);
           }
         } else {
           console.log('User role found:', roleData.role);
@@ -53,7 +45,7 @@ export function useUserRole() {
         }
       } catch (error) {
         console.error('Error fetching user role:', error);
-        setRole('attendee');
+        setRole(null);
       } finally {
         setIsLoading(false);
       }
@@ -69,7 +61,12 @@ export function useUserRole() {
   const isAssistant = role === 'assistant';
   const isAttendee = role === 'attendee';
 
-  console.log('Current user role state:', { role, canCreateTournaments, isLoading });
+  console.log('Current user role state:', { 
+    userId: user?.id, 
+    role, 
+    canCreateTournaments, 
+    isLoading 
+  });
 
   return {
     role,
