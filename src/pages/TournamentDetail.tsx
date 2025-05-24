@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ChevronLeft,
@@ -33,72 +33,133 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+type Tournament = {
+  id: string;
+  name: string;
+  format: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  team_count: number | null;
+  round_count: number | null;
+  location: string | null;
+  description: string | null;
+  status: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
 
 const TournamentDetail = () => {
   const { id } = useParams<{ id: string }>();
-  
-  // Mock data - would come from API in real app
-  const tournament = {
-    id: id || "1",
-    name: "Global Debate Championship",
-    format: "BP",
-    formatName: "British Parliamentary",
-    status: "active",
-    startDate: "May 25, 2025",
-    endDate: "May 27, 2025",
-    location: "London, UK",
-    description: "The annual Global Debate Championship brings together the best university debate teams from around the world.",
-    teamCount: 32,
-    judgeCount: 16,
-    roundCount: 6,
-    currentRound: 3,
-    rounds: [
-      { roundNumber: 1, status: "completed", motion: "This House Would ban private education" },
-      { roundNumber: 2, status: "completed", motion: "This House Believes that developing nations should prioritize climate adaptation over mitigation" },
-      { roundNumber: 3, status: "active", motion: "This House Would allow the sale of human organs" },
-      { roundNumber: 4, status: "upcoming", motion: "TBA" },
-      { roundNumber: 5, status: "upcoming", motion: "TBA" },
-      { roundNumber: 6, status: "upcoming", motion: "TBA" },
-    ],
-    topTeams: [
-      { rank: 1, name: "Oxford A", wins: 6, points: 18 },
-      { rank: 2, name: "Harvard B", wins: 5, points: 16 },
-      { rank: 3, name: "Sydney A", wins: 5, points: 15 },
-    ]
-  };
-  
-  const statusColors = {
-    active: "bg-tabby-success",
-    upcoming: "bg-tabby-accent",
-    completed: "bg-tabby-warning",
-  };
-  
+  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
   const [aiInsights, setAiInsights] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (id) {
+      fetchTournament();
+    }
+  }, [id]);
+
+  const fetchTournament = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching tournament:', error);
+        toast.error("Failed to load tournament");
+        return;
+      }
+
+      setTournament(data);
+    } catch (error) {
+      console.error('Error fetching tournament:', error);
+      toast.error("Failed to load tournament");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "TBD";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric',
+      year: 'numeric' 
+    });
+  };
+
+  const getFormatName = (format: string | null) => {
+    switch (format?.toLowerCase()) {
+      case 'bp': return 'British Parliamentary';
+      case 'wsdc': return 'World Schools';
+      case 'apda': return 'American Parliamentary';
+      case 'policy': return 'Policy Debate';
+      default: return format || 'TBD';
+    }
+  };
+
+  const statusColors = {
+    active: "bg-tabby-success",
+    upcoming: "bg-tabby-accent", 
+    completed: "bg-tabby-warning",
+  };
   
   const loadAiInsights = () => {
     setAiInsightsLoading(true);
     // Simulate AI loading
     setTimeout(() => {
-      setAiInsights("Based on the current standings and previous round performances, the most competitive debates are likely to be between Oxford A and Harvard B teams. The motion analysis shows a balanced set of topics with no clear bias towards government or opposition positions. Judge allocations show good distribution with minimal conflicts of interest.");
+      setAiInsights("Tournament analysis will be available once teams and rounds are added. Current tournament setup shows good planning with proper format selection and participant capacity.");
       setAiInsightsLoading(false);
     }, 2000);
   };
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-tabby-secondary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!tournament) {
+    return (
+      <MainLayout>
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-semibold text-gray-900">Tournament not found</h2>
+          <p className="mt-2 text-gray-600">The tournament you're looking for doesn't exist.</p>
+          <Link to="/tournaments">
+            <Button className="mt-4">Back to Tournaments</Button>
+          </Link>
+        </div>
+      </MainLayout>
+    );
+  }
   
   return (
     <MainLayout>
       <PageHeader 
         title={tournament.name}
-        description={`${tournament.formatName} format • ${tournament.location}`}
+        description={`${getFormatName(tournament.format)} format • ${tournament.location || "Location TBD"}`}
         actions={
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button 
-              variant="outline"
-              onClick={() => window.history.back()}
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
+            <Link to="/tournaments">
+              <Button variant="outline">
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            </Link>
             <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
               <Edit className="h-4 w-4 mr-2" />
               Edit
@@ -110,12 +171,12 @@ const TournamentDetail = () => {
       {/* Status Bar */}
       <div className="flex items-center mb-6 p-3 bg-gray-50 rounded-md border border-gray-100">
         <div className="flex items-center">
-          <div className={`tabby-status-circle ${statusColors[tournament.status as keyof typeof statusColors]}`} />
-          <span className="text-sm font-medium ml-2 capitalize">{tournament.status}</span>
+          <div className={`tabby-status-circle ${statusColors[tournament.status as keyof typeof statusColors] || 'bg-gray-400'}`} />
+          <span className="text-sm font-medium ml-2 capitalize">{tournament.status || 'upcoming'}</span>
         </div>
         <div className="ml-6 text-sm text-gray-500 flex items-center">
           <Clock className="h-4 w-4 mr-2 text-gray-400" />
-          Current Round: {tournament.currentRound} of {tournament.roundCount}
+          Rounds: {tournament.round_count || 'TBD'}
         </div>
       </div>
       
@@ -130,17 +191,17 @@ const TournamentDetail = () => {
             <div className="mt-4 space-y-3">
               <div className="text-sm">
                 <div className="font-medium">Start Date</div>
-                <div className="text-gray-500">{tournament.startDate}</div>
+                <div className="text-gray-500">{formatDate(tournament.start_date)}</div>
               </div>
               <div className="text-sm">
                 <div className="font-medium">End Date</div>
-                <div className="text-gray-500">{tournament.endDate}</div>
+                <div className="text-gray-500">{formatDate(tournament.end_date)}</div>
               </div>
               <div className="text-sm">
                 <div className="font-medium">Location</div>
                 <div className="flex items-center text-gray-500">
                   <MapPin className="h-3.5 w-3.5 mr-1" />
-                  {tournament.location}
+                  {tournament.location || "TBD"}
                 </div>
               </div>
             </div>
@@ -156,16 +217,16 @@ const TournamentDetail = () => {
             <div className="mt-4 space-y-3">
               <div className="text-sm flex justify-between items-center">
                 <div>Teams</div>
-                <div className="font-medium">{tournament.teamCount}</div>
+                <div className="font-medium">{tournament.team_count || 'TBD'}</div>
               </div>
               <div className="text-sm flex justify-between items-center">
                 <div>Judges</div>
-                <div className="font-medium">{tournament.judgeCount}</div>
+                <div className="font-medium">TBD</div>
               </div>
               <div className="mt-4">
                 <Link to={`/tournaments/${id}/teams`}>
                   <Button variant="outline" size="sm" className="w-full">
-                    View All Teams
+                    Manage Teams
                   </Button>
                 </Link>
               </div>
@@ -177,26 +238,21 @@ const TournamentDetail = () => {
           <CardContent className="pt-6">
             <div className="flex items-center">
               <Award className="h-5 w-5 text-tabby-secondary mr-2" />
-              <CardTitle className="text-base">Current Standings</CardTitle>
+              <CardTitle className="text-base">Tournament Progress</CardTitle>
             </div>
-            <div className="mt-4 space-y-2">
-              {tournament.topTeams.map((team) => (
-                <div key={team.rank} className="flex justify-between items-center text-sm">
-                  <div className="flex items-center">
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${team.rank === 1 ? 'bg-yellow-100 text-yellow-700' : team.rank === 2 ? 'bg-gray-100 text-gray-700' : 'bg-amber-100 text-amber-700'} mr-2`}>
-                      {team.rank}
-                    </span>
-                    <span>{team.name}</span>
-                  </div>
-                  <div className="text-gray-500">
-                    {team.wins} wins | {team.points} pts
-                  </div>
-                </div>
-              ))}
+            <div className="mt-4 space-y-3">
+              <div className="text-sm">
+                <div className="font-medium">Format</div>
+                <div className="text-gray-500">{getFormatName(tournament.format)}</div>
+              </div>
+              <div className="text-sm">
+                <div className="font-medium">Total Rounds</div>
+                <div className="text-gray-500">{tournament.round_count || 'TBD'}</div>
+              </div>
               <div className="mt-4">
                 <Link to={`/tournaments/${id}/results`}>
                   <Button variant="outline" size="sm" className="w-full">
-                    Full Standings
+                    View Results
                   </Button>
                 </Link>
               </div>
@@ -282,59 +338,25 @@ const TournamentDetail = () => {
         
         {/* Rounds Tab */}
         <TabsContent value="rounds" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tournament.rounds.map((round) => (
-              <Card 
-                key={round.roundNumber}
-                className={round.status === "active" ? "border-2 border-tabby-secondary" : ""}
-              >
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle>Round {round.roundNumber}</CardTitle>
-                    <div className={`tabby-badge-${round.status === "completed" ? "success" : round.status === "active" ? "primary" : "secondary"} capitalize`}>
-                      {round.status}
-                    </div>
-                  </div>
-                  <CardDescription>
-                    {round.status === "completed" ? "Completed" : round.status === "active" ? "In progress" : "Not started"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="text-sm">
-                      <div className="font-medium">Motion</div>
-                      <div className="text-gray-600 italic mt-1">{round.motion}</div>
-                    </div>
-                    {round.status !== "upcoming" && (
-                      <div className="pt-2">
-                        <Link to={`/tournaments/${id}/rounds`}>
-                          <Button variant="outline" size="sm" className="w-full">
-                            {round.status === "completed" ? (
-                              <>
-                                <ClipboardCheck className="h-4 w-4 mr-2" />
-                                View Results
-                              </>
-                            ) : round.status === "active" ? (
-                              <>
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                Manage Round
-                              </>
-                            ) : null}
-                          </Button>
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          
-          <div className="flex justify-center mt-4">
-            <Link to={`/tournaments/${id}/rounds`}>
-              <Button variant="outline">View All Rounds</Button>
-            </Link>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Tournament Rounds</CardTitle>
+              <CardDescription>Setup and manage rounds for this tournament</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-700">No rounds created yet</h3>
+                <p className="text-gray-500 mt-2 mb-6">Start by creating rounds for this tournament</p>
+                <Link to={`/tournaments/${id}/rounds`}>
+                  <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Setup Rounds
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         {/* Teams Tab */}
@@ -347,10 +369,13 @@ const TournamentDetail = () => {
             <CardContent>
               <div className="text-center py-8">
                 <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-700">Team details</h3>
-                <p className="text-gray-500 mt-2 mb-6">View detailed team information and manage registrations</p>
+                <h3 className="text-lg font-medium text-gray-700">No teams registered yet</h3>
+                <p className="text-gray-500 mt-2 mb-6">Add teams to start the tournament</p>
                 <Link to={`/tournaments/${id}/teams`}>
-                  <Button>Go to Teams Page</Button>
+                  <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
+                    <Users className="h-4 w-4 mr-2" />
+                    Manage Teams
+                  </Button>
                 </Link>
               </div>
             </CardContent>
@@ -367,9 +392,12 @@ const TournamentDetail = () => {
             <CardContent>
               <div className="text-center py-8">
                 <UserCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-700">Judge details</h3>
-                <p className="text-gray-500 mt-2 mb-6">View detailed judge information and manage allocations</p>
-                <Button>Manage Judges</Button>
+                <h3 className="text-lg font-medium text-gray-700">No judges assigned yet</h3>
+                <p className="text-gray-500 mt-2 mb-6">Add judges to evaluate debates</p>
+                <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
+                  <UserCircle className="h-4 w-4 mr-2" />
+                  Add Judges
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -385,9 +413,12 @@ const TournamentDetail = () => {
             <CardContent>
               <div className="text-center py-8">
                 <MessageCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-700">Motion details</h3>
-                <p className="text-gray-500 mt-2 mb-6">View and manage debate motions for all rounds</p>
-                <Button>Manage Motions</Button>
+                <h3 className="text-lg font-medium text-gray-700">No motions prepared yet</h3>
+                <p className="text-gray-500 mt-2 mb-6">Create debate motions for tournament rounds</p>
+                <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Add Motions
+                </Button>
               </div>
             </CardContent>
           </Card>
