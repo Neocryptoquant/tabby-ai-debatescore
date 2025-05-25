@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
@@ -160,10 +159,12 @@ const TournamentDetail = () => {
                 Back
               </Button>
             </Link>
-            <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+            <Link to={`/tournaments/${id}/edit`}>
+              <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </Link>
           </div>
         }
       />
@@ -359,7 +360,7 @@ const TournamentDetail = () => {
           </Card>
         </TabsContent>
         
-        {/* Teams Tab */}
+        {/* Teams Tab - Now redirects to dedicated teams page */}
         <TabsContent value="teams">
           <Card>
             <CardHeader>
@@ -369,8 +370,8 @@ const TournamentDetail = () => {
             <CardContent>
               <div className="text-center py-8">
                 <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-700">No teams registered yet</h3>
-                <p className="text-gray-500 mt-2 mb-6">Add teams to start the tournament</p>
+                <h3 className="text-lg font-medium text-gray-700">Manage Tournament Teams</h3>
+                <p className="text-gray-500 mt-2 mb-6">Add and organize teams for this tournament</p>
                 <Link to={`/tournaments/${id}/teams`}>
                   <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
                     <Users className="h-4 w-4 mr-2" />

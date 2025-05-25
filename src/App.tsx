@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Tournaments from "./pages/Tournaments";
 import TournamentDetail from "./pages/TournamentDetail";
 import CreateTournament from "./pages/CreateTournament";
+import TournamentTeams from "./pages/TournamentTeams";
 import Teams from "./pages/Teams";
 import Rounds from "./pages/Rounds";
 import Results from "./pages/Results";
@@ -60,7 +60,7 @@ const App = () => (
             } />
             <Route path="/tournaments/:id/teams" element={
               <ProtectedRoute requireAuth={false}>
-                <Teams />
+                <TournamentTeams />
               </ProtectedRoute>
             } />
             <Route path="/tournaments/:id/rounds" element={
@@ -88,6 +88,11 @@ const App = () => (
             <Route path="/tournaments/create" element={
               <ProtectedRoute>
                 <CreateTournament />
+              </ProtectedRoute>
+            } />
+            <Route path="/tournaments/:id/edit" element={
+              <ProtectedRoute>
+                <EditTournament />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={
