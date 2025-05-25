@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Tournaments from "./pages/Tournaments";
 import TournamentDetail from "./pages/TournamentDetail";
 import CreateTournament from "./pages/CreateTournament";
+import EditTournament from "./pages/EditTournament";
 import TournamentTeams from "./pages/TournamentTeams";
 import Teams from "./pages/Teams";
 import Rounds from "./pages/Rounds";
