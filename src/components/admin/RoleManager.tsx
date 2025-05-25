@@ -7,11 +7,19 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRole } from "@/hooks/useUserRole";
 
+/**
+ * Component that allows users to assign themselves the tab_master role
+ * This is typically used for initial setup or development purposes
+ */
 export function RoleManager() {
   const { user } = useAuth();
   const { role, isLoading } = useUserRole();
   const [isUpdating, setIsUpdating] = useState(false);
 
+  /**
+   * Assigns the tab_master role to the current user
+   * First removes any existing role, then inserts the new one
+   */
   const assignTabMasterRole = async () => {
     if (!user) {
       toast.error("Must be logged in");
@@ -22,7 +30,7 @@ export function RoleManager() {
     try {
       console.log('Assigning tab master role to user:', user.id);
       
-      // First delete any existing role for this user
+      // First delete any existing role for this user to avoid conflicts
       const { error: deleteError } = await supabase
         .from('user_roles')
         .delete()
@@ -32,7 +40,7 @@ export function RoleManager() {
         console.log('Delete error (this is normal if no role exists):', deleteError);
       }
 
-      // Then insert tab_master role
+      // Insert the new tab_master role
       const { data, error } = await supabase
         .from('user_roles')
         .insert({ user_id: user.id, role: 'tab_master' })
@@ -45,7 +53,7 @@ export function RoleManager() {
       } else {
         console.log('Role assigned successfully:', data);
         toast.success("Tab master role assigned successfully!");
-        // Refresh the page to update the role
+        // Refresh the page to update the role throughout the app
         setTimeout(() => {
           window.location.reload();
         }, 1000);
@@ -58,10 +66,12 @@ export function RoleManager() {
     }
   };
 
+  // Don't render if user is not logged in
   if (!user) {
     return null;
   }
 
+  // Show loading state while fetching user role
   if (isLoading) {
     return (
       <Card className="max-w-md mx-auto mt-8">

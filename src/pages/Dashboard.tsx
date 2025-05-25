@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
+// Type definition for tournament data from the database
 type Tournament = {
   id: string;
   name: string;
@@ -24,28 +25,37 @@ type Tournament = {
   status: string | null;
 };
 
+/**
+ * Dashboard component - main landing page for authenticated users
+ * Shows user statistics, recent tournaments, and role-based actions
+ */
 const Dashboard = () => {
   const { canCreateTournaments } = useUserRole();
   const { user } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Fetch user's tournaments when component mounts or user changes
   useEffect(() => {
     if (user) {
       fetchUserTournaments();
     }
   }, [user]);
 
+  /**
+   * Fetches tournaments created by the current user from the database
+   */
   const fetchUserTournaments = async () => {
     if (!user) return;
     
     try {
+      // Query tournaments table for tournaments created by current user
       const { data, error } = await supabase
         .from('tournaments')
         .select('*')
         .eq('created_by', user.id)
         .order('created_at', { ascending: false })
-        .limit(6);
+        .limit(6); // Limit to 6 most recent tournaments
 
       if (error) {
         console.error('Error fetching tournaments:', error);
@@ -60,6 +70,10 @@ const Dashboard = () => {
     }
   };
 
+  /**
+   * Formats tournament data for display in tournament cards
+   * Handles null values and formats dates properly
+   */
   const formatTournamentData = (tournament: Tournament) => {
     const formatDate = (dateStr: string | null) => {
       if (!dateStr) return "TBD";
@@ -86,11 +100,13 @@ const Dashboard = () => {
     };
   };
 
+  // Calculate statistics for display
   const activeTournaments = tournaments.filter(t => t.status === "active");
   const formattedTournaments = tournaments.map(formatTournamentData);
   
   return (
     <MainLayout>
+      {/* Page header with title and new tournament button (if user has permissions) */}
       <PageHeader 
         title="Dashboard"
         description="Welcome back to TabbyAI!"
@@ -106,12 +122,12 @@ const Dashboard = () => {
         }
       />
 
-      {/* Show Role Manager if user can't create tournaments */}
+      {/* Show Role Manager if user doesn't have tournament creation permissions */}
       {!canCreateTournaments && user && (
         <RoleManager />
       )}
       
-      {/* Stats Cards */}
+      {/* Statistics Cards Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 
           title="Active Tournaments" 
@@ -135,7 +151,7 @@ const Dashboard = () => {
         />
       </div>
       
-      {/* Activity Section */}
+      {/* Recent Activity Section */}
       <div className="mb-8">
         <div className="flex items-center mb-4">
           <Activity className="h-5 w-5 text-tabby-secondary mr-2" />
@@ -143,6 +159,7 @@ const Dashboard = () => {
         </div>
         <div className="tabby-card space-y-4">
           {tournaments.length > 0 ? (
+            // Show recent tournament activity
             tournaments.slice(0, 3).map((tournament) => (
               <div key={tournament.id} className="border-l-4 border-tabby-accent pl-4 py-1">
                 <p className="text-sm">Tournament <span className="font-medium">{tournament.name}</span> created</p>
@@ -150,6 +167,7 @@ const Dashboard = () => {
               </div>
             ))
           ) : (
+            // Show empty state when no tournaments exist
             <div className="border-l-4 border-tabby-secondary pl-4 py-1">
               <p className="text-sm">No recent activity</p>
               <p className="text-xs text-gray-500 mt-1">Create your first tournament to get started</p>
@@ -158,7 +176,7 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* Your Tournaments */}
+      {/* User's Tournaments Section */}
       <div>
         <div className="flex items-center mb-4">
           <Trophy className="h-5 w-5 text-tabby-secondary mr-2" />
@@ -166,11 +184,14 @@ const Dashboard = () => {
         </div>
         
         {isLoading ? (
+          // Loading state
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tabby-secondary mx-auto"></div>
           </div>
         ) : (
+          // Tournament grid
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Render existing tournament cards */}
             {formattedTournaments.map((tournament) => (
               <TournamentCard 
                 key={tournament.id}
@@ -178,6 +199,7 @@ const Dashboard = () => {
               />
             ))}
             
+            {/* Add new tournament card (if user has permissions) */}
             {canCreateTournaments && (
               <Link to="/tournaments/create">
                 <div className="tabby-card h-full border-dashed flex flex-col items-center justify-center text-gray-500 hover:text-tabby-secondary hover:border-tabby-secondary transition-colors group">
@@ -189,6 +211,7 @@ const Dashboard = () => {
               </Link>
             )}
 
+            {/* Empty state for users without permissions */}
             {!canCreateTournaments && tournaments.length === 0 && (
               <div className="tabby-card h-full flex flex-col items-center justify-center text-gray-500">
                 <Trophy className="h-12 w-12 mb-4" />
@@ -200,7 +223,7 @@ const Dashboard = () => {
         )}
       </div>
       
-      {/* AI Assistant */}
+      {/* AI Assistant Component */}
       <AIAssistant />
     </MainLayout>
   );

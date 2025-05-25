@@ -3,8 +3,13 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
+// Define the possible user roles in the application
 export type UserRole = 'tab_master' | 'assistant' | 'attendee' | null;
 
+/**
+ * Custom hook to manage user roles and permissions
+ * Fetches the current user's role from the database and provides permission checks
+ */
 export function useUserRole() {
   const { user } = useAuth();
   const [role, setRole] = useState<UserRole>(null);
@@ -12,6 +17,7 @@ export function useUserRole() {
 
   useEffect(() => {
     async function fetchUserRole() {
+      // If no user is logged in, reset role state
       if (!user) {
         setRole(null);
         setIsLoading(false);
@@ -21,7 +27,7 @@ export function useUserRole() {
       try {
         console.log('Fetching role for user:', user.id);
         
-        // Check if user has any role
+        // Query the user_roles table to get the current user's role
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
@@ -31,7 +37,7 @@ export function useUserRole() {
         if (roleError) {
           console.error('Error fetching user role:', roleError);
           
-          // If no role exists (PGRST116 = no rows returned), don't create one automatically
+          // PGRST116 means no rows returned - user has no role assigned yet
           if (roleError.code === 'PGRST116') {
             console.log('No role found for user - user needs to be assigned a role');
             setRole(null);
@@ -54,6 +60,7 @@ export function useUserRole() {
     fetchUserRole();
   }, [user]);
 
+  // Permission checks based on user role
   const canCreateTournaments = role === 'tab_master' || role === 'assistant';
   const canEditTournaments = role === 'tab_master' || role === 'assistant';
   const canDeleteTournaments = role === 'tab_master';
@@ -68,6 +75,7 @@ export function useUserRole() {
     isLoading 
   });
 
+  // Return role state and permission checks
   return {
     role,
     isLoading,
