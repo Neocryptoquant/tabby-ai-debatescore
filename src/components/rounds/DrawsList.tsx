@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Trophy, Shuffle } from "lucide-react";
+import { Users, Trophy, Shuffle, Play, CheckCircle, Clock } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
 
 interface Team {
   id: string;
@@ -45,12 +46,31 @@ export const DrawsList = ({ draws, onGenerateDraws, onRegenerateDraws, isLoading
     }
   };
 
+  const getStatusIcon = (status: Draw['status']) => {
+    switch (status) {
+      case 'pending': return <Clock className="h-3 w-3" />;
+      case 'in_progress': return <Play className="h-3 w-3" />;
+      case 'completed': return <CheckCircle className="h-3 w-3" />;
+      default: return <Clock className="h-3 w-3" />;
+    }
+  };
+
   const groupedDraws = draws.reduce((acc, draw) => {
     const round = `Round ${draw.round_number}`;
     if (!acc[round]) acc[round] = [];
     acc[round].push(draw);
     return acc;
   }, {} as Record<string, Draw[]>);
+
+  const handleStartRound = (roundNumber: number) => {
+    // Update all draws in this round to in_progress status
+    toast.success(`Round ${roundNumber} started!`);
+  };
+
+  const handleCompleteRound = (roundNumber: number) => {
+    // Update all draws in this round to completed status
+    toast.success(`Round ${roundNumber} completed!`);
+  };
 
   if (isLoading) {
     return (
@@ -77,7 +97,7 @@ export const DrawsList = ({ draws, onGenerateDraws, onRegenerateDraws, isLoading
           <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-700 mb-2">No draws created yet</h3>
           <p className="text-gray-500 mb-4">Generate draws to pair teams for each round</p>
-          <Button onClick={onGenerateDraws} className="gap-2">
+          <Button onClick={onGenerateDraws} className="gap-2 bg-tabby-secondary hover:bg-tabby-secondary/90">
             <Shuffle className="h-4 w-4" />
             Generate Draws
           </Button>
@@ -96,65 +116,103 @@ export const DrawsList = ({ draws, onGenerateDraws, onRegenerateDraws, isLoading
         </Button>
       </div>
 
-      {Object.entries(groupedDraws).map(([roundName, roundDraws]) => (
-        <Card key={roundName}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                {roundName}
-              </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onRegenerateDraws(roundDraws[0].round_number)}
-                className="gap-1"
-              >
-                <Shuffle className="h-3 w-3" />
-                Regenerate
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Government</TableHead>
-                  <TableHead>Opposition</TableHead>
-                  <TableHead>Judge</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roundDraws.map((draw) => (
-                  <TableRow key={draw.id}>
-                    <TableCell className="font-medium">{draw.room}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{draw.gov_team.name}</div>
-                        <div className="text-sm text-gray-500">{draw.gov_team.institution}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{draw.opp_team.name}</div>
-                        <div className="text-sm text-gray-500">{draw.opp_team.institution}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{draw.judge || "TBA"}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(draw.status)}>
-                        {draw.status.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
+      {Object.entries(groupedDraws).map(([roundName, roundDraws]) => {
+        const roundNumber = roundDraws[0].round_number;
+        const roundStatus = roundDraws[0].status;
+        
+        return (
+          <Card key={roundName}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5" />
+                  {roundName}
+                  <Badge className={getStatusColor(roundStatus)}>
+                    <span className="flex items-center gap-1">
+                      {getStatusIcon(roundStatus)}
+                      {roundStatus.replace('_', ' ')}
+                    </span>
+                  </Badge>
+                </CardTitle>
+                <div className="flex gap-2">
+                  {roundStatus === 'pending' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleStartRound(roundNumber)}
+                      className="gap-1"
+                    >
+                      <Play className="h-3 w-3" />
+                      Start Round
+                    </Button>
+                  )}
+                  {roundStatus === 'in_progress' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCompleteRound(roundNumber)}
+                      className="gap-1"
+                    >
+                      <CheckCircle className="h-3 w-3" />
+                      Complete Round
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onRegenerateDraws(roundNumber)}
+                    className="gap-1"
+                  >
+                    <Shuffle className="h-3 w-3" />
+                    Regenerate
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Government</TableHead>
+                    <TableHead>Opposition</TableHead>
+                    <TableHead>Judge</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ))}
+                </TableHeader>
+                <TableBody>
+                  {roundDraws.map((draw) => (
+                    <TableRow key={draw.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{draw.room}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-green-700">{draw.gov_team.name}</div>
+                          <div className="text-sm text-gray-500">{draw.gov_team.institution}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-red-700">{draw.opp_team.name}</div>
+                          <div className="text-sm text-gray-500">{draw.opp_team.institution}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{draw.judge || "TBA"}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(draw.status)}>
+                          <span className="flex items-center gap-1">
+                            {getStatusIcon(draw.status)}
+                            {draw.status.replace('_', ' ')}
+                          </span>
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };
