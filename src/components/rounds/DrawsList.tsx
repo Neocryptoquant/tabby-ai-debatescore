@@ -16,17 +16,17 @@ import { toast } from "sonner";
 interface Team {
   id: string;
   name: string;
-  institution: string;
+  institution?: string;
 }
 
 interface Draw {
   id: string;
-  round_number: number;
   room: string;
   gov_team: Team;
   opp_team: Team;
   judge?: string;
   status: 'pending' | 'in_progress' | 'completed';
+  round: { round_number: number };
 }
 
 interface DrawsListProps {
@@ -56,19 +56,17 @@ export const DrawsList = ({ draws, onGenerateDraws, onRegenerateDraws, isLoading
   };
 
   const groupedDraws = draws.reduce((acc, draw) => {
-    const round = `Round ${draw.round_number}`;
+    const round = `Round ${draw.round.round_number}`;
     if (!acc[round]) acc[round] = [];
     acc[round].push(draw);
     return acc;
   }, {} as Record<string, Draw[]>);
 
   const handleStartRound = (roundNumber: number) => {
-    // Update all draws in this round to in_progress status
     toast.success(`Round ${roundNumber} started!`);
   };
 
   const handleCompleteRound = (roundNumber: number) => {
-    // Update all draws in this round to completed status
     toast.success(`Round ${roundNumber} completed!`);
   };
 
@@ -117,7 +115,7 @@ export const DrawsList = ({ draws, onGenerateDraws, onRegenerateDraws, isLoading
       </div>
 
       {Object.entries(groupedDraws).map(([roundName, roundDraws]) => {
-        const roundNumber = roundDraws[0].round_number;
+        const roundNumber = roundDraws[0].round.round_number;
         const roundStatus = roundDraws[0].status;
         
         return (
