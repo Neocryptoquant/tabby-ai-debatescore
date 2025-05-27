@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -22,6 +21,10 @@ interface TeamFormData {
   speaker4_name?: string;
 }
 
+/**
+ * Teams management page for tournament administration
+ * Handles team registration, viewing, and statistics
+ */
 const Teams = () => {
   const { id } = useParams<{ id: string }>();
   const [isSaving, setIsSaving] = useState(false);
@@ -33,6 +36,9 @@ const Teams = () => {
     deleteTeam
   } = useTournamentData(id);
 
+  /**
+   * Handles adding a new team with proper error handling and user feedback
+   */
   const handleAddTeam = async (data: TeamFormData) => {
     setIsSaving(true);
     try {
@@ -43,14 +49,17 @@ const Teams = () => {
         speaker_2: data.speaker2_name
       });
     } catch (error) {
-      // Error already handled in the hook
+      // Error already handled in the hook with enhanced feedback
+      console.error('Failed to add team:', error);
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleEditTeam = (team: any) => {
-    toast.info("Edit functionality coming soon!");
+    toast.info("📝 Edit functionality coming soon!", {
+      description: "Team editing will be available in the next update"
+    });
     console.log('Edit team:', team);
   };
 
@@ -59,11 +68,15 @@ const Teams = () => {
   };
 
   const handleBulkImport = () => {
-    toast.info("Bulk import feature coming soon!");
+    toast.info("📁 Bulk import feature coming soon!", {
+      description: "CSV import will be available in the next update"
+    });
   };
 
   const generateTeamStats = () => {
-    toast.info("Team statistics feature coming soon!");
+    toast.info("📊 Team statistics feature coming soon!", {
+      description: "Advanced analytics will be available soon"
+    });
   };
 
   // Transform teams data to match the TeamsList component interface

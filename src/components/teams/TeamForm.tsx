@@ -1,10 +1,13 @@
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Save, Users } from "lucide-react";
+import { OperationFeedback } from "@/components/feedback/OperationFeedback";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface TeamFormData {
   name: string;
@@ -16,11 +19,17 @@ interface TeamFormData {
 }
 
 interface TeamFormProps {
-  onSave: (data: TeamFormData) => void;
+  onSave: (data: TeamFormData) => Promise<void>;
   isLoading?: boolean;
 }
 
+/**
+ * Form component for adding new teams to tournaments
+ * Includes validation, loading states, and success/error feedback
+ */
 export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
+  const [operationStatus, setOperationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  
   const {
     register,
     handleSubmit,
@@ -28,10 +37,22 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
     formState: { errors },
   } = useForm<TeamFormData>();
 
-  const onSubmit = (data: TeamFormData) => {
+  const onSubmit = async (data: TeamFormData) => {
     console.log('Creating new team:', data);
-    onSave(data);
-    reset();
+    setOperationStatus('loading');
+    
+    try {
+      await onSave(data);
+      setOperationStatus('success');
+      reset();
+      
+      // Reset status after showing success
+      setTimeout(() => setOperationStatus('idle'), 3000);
+    } catch (error) {
+      setOperationStatus('error');
+      // Reset status after showing error
+      setTimeout(() => setOperationStatus('idle'), 4000);
+    }
   };
 
   return (
@@ -44,6 +65,14 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Operation feedback */}
+          <OperationFeedback
+            status={operationStatus}
+            successMessage="Team added successfully! ✨"
+            errorMessage="Failed to add team. Please try again."
+            loadingMessage="Adding team to tournament..."
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="name">Team Name *</Label>
@@ -51,6 +80,7 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
                 id="name"
                 {...register("name", { required: "Team name is required" })}
                 placeholder="Team Alpha"
+                disabled={isLoading}
               />
               {errors.name && (
                 <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>
@@ -63,6 +93,7 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
                 id="institution"
                 {...register("institution", { required: "Institution is required" })}
                 placeholder="University Name"
+                disabled={isLoading}
               />
               {errors.institution && (
                 <p className="text-sm text-red-600 mt-1">{errors.institution.message}</p>
@@ -80,6 +111,7 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
                   id="speaker1_name"
                   {...register("speaker1_name", { required: "Speaker 1 name is required" })}
                   placeholder="First speaker name"
+                  disabled={isLoading}
                 />
                 {errors.speaker1_name && (
                   <p className="text-sm text-red-600 mt-1">{errors.speaker1_name.message}</p>
@@ -92,6 +124,7 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
                   id="speaker2_name"
                   {...register("speaker2_name", { required: "Speaker 2 name is required" })}
                   placeholder="Second speaker name"
+                  disabled={isLoading}
                 />
                 {errors.speaker2_name && (
                   <p className="text-sm text-red-600 mt-1">{errors.speaker2_name.message}</p>
@@ -104,6 +137,7 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
                   id="speaker3_name"
                   {...register("speaker3_name")}
                   placeholder="Third speaker name (optional)"
+                  disabled={isLoading}
                 />
               </div>
 
@@ -113,6 +147,7 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
                   id="speaker4_name"
                   {...register("speaker4_name")}
                   placeholder="Fourth speaker name (optional)"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -120,14 +155,11 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
 
           <Button 
             type="submit" 
-            disabled={isLoading}
+            disabled={isLoading || operationStatus === 'loading'}
             className="w-full bg-tabby-secondary hover:bg-tabby-secondary/90"
           >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Adding Team...
-              </>
+            {isLoading || operationStatus === 'loading' ? (
+              <LoadingSpinner size="sm" text="Adding Team..." />
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
