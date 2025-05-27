@@ -138,6 +138,7 @@ export const useTournamentData = (tournamentId?: string) => {
 
   /**
    * Fetches all draws for the current tournament with related team and round data
+   * Fixed to properly handle multiple foreign key relationships
    */
   const fetchDraws = async () => {
     if (!tournamentId) return;
@@ -158,19 +159,20 @@ export const useTournamentData = (tournamentId?: string) => {
         return;
       }
 
+      // Fetch draws with proper foreign key hints to avoid ambiguity
       const { data, error } = await supabase
         .from('draws')
         .select(`
           *,
-          gov_team:gov_team_id(id, name, institution, tournament_id, speaker_1, speaker_2),
-          opp_team:opp_team_id(id, name, institution, tournament_id, speaker_1, speaker_2),
-          round:round_id(round_number)
+          gov_team:teams!draws_gov_team_id_fkey(id, name, institution, tournament_id, speaker_1, speaker_2),
+          opp_team:teams!draws_opp_team_id_fkey(id, name, institution, tournament_id, speaker_1, speaker_2),
+          round:rounds!draws_round_id_fkey(round_number)
         `)
         .in('round_id', roundIds);
 
       if (error) throw error;
       
-      // Properly type the draws data
+      // Properly type the draws data with proper error handling
       const typedDraws: Draw[] = (data || []).map(draw => ({
         id: draw.id,
         round_id: draw.round_id,
