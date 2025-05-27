@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -269,45 +270,47 @@ export const useTournamentData = (tournamentId?: string) => {
         throw error;
       }
       
-      // Properly type the draws data with validation
-      const typedDraws: Draw[] = (data || []).map(draw => {
-        // Validate that required relationships exist
-        if (!draw.gov_team || !draw.opp_team || !draw.round) {
-          console.warn('Draw missing required relationships:', draw);
-          return null;
-        }
+      // Properly type the draws data with validation - Fixed type predicate
+      const typedDraws: Draw[] = (data || [])
+        .map(draw => {
+          // Validate that required relationships exist
+          if (!draw.gov_team || !draw.opp_team || !draw.round) {
+            console.warn('Draw missing required relationships:', draw);
+            return null;
+          }
 
-        return {
-          id: draw.id,
-          round_id: draw.round_id,
-          room: draw.room,
-          gov_team_id: draw.gov_team_id,
-          opp_team_id: draw.opp_team_id,
-          judge: draw.judge || undefined,
-          status: (draw.status as 'pending' | 'in_progress' | 'completed') || 'pending',
-          gov_score: draw.gov_score || undefined,
-          opp_score: draw.opp_score || undefined,
-          gov_team: {
-            id: draw.gov_team.id,
-            tournament_id: draw.gov_team.tournament_id,
-            name: draw.gov_team.name,
-            institution: draw.gov_team.institution || undefined,
-            speaker_1: draw.gov_team.speaker_1 || undefined,
-            speaker_2: draw.gov_team.speaker_2 || undefined
-          },
-          opp_team: {
-            id: draw.opp_team.id,
-            tournament_id: draw.opp_team.tournament_id,
-            name: draw.opp_team.name,
-            institution: draw.opp_team.institution || undefined,
-            speaker_1: draw.opp_team.speaker_1 || undefined,
-            speaker_2: draw.opp_team.speaker_2 || undefined
-          },
-          round: { round_number: draw.round.round_number },
-          created_at: draw.created_at,
-          updated_at: draw.updated_at
-        };
-      }).filter((draw): draw is Draw => draw !== null);
+          return {
+            id: draw.id,
+            round_id: draw.round_id,
+            room: draw.room,
+            gov_team_id: draw.gov_team_id,
+            opp_team_id: draw.opp_team_id,
+            judge: draw.judge || undefined,
+            status: (draw.status as 'pending' | 'in_progress' | 'completed') || 'pending',
+            gov_score: draw.gov_score || undefined,
+            opp_score: draw.opp_score || undefined,
+            gov_team: {
+              id: draw.gov_team.id,
+              tournament_id: draw.gov_team.tournament_id,
+              name: draw.gov_team.name,
+              institution: draw.gov_team.institution || undefined,
+              speaker_1: draw.gov_team.speaker_1 || undefined,
+              speaker_2: draw.gov_team.speaker_2 || undefined
+            },
+            opp_team: {
+              id: draw.opp_team.id,
+              tournament_id: draw.opp_team.tournament_id,
+              name: draw.opp_team.name,
+              institution: draw.opp_team.institution || undefined,
+              speaker_1: draw.opp_team.speaker_1 || undefined,
+              speaker_2: draw.opp_team.speaker_2 || undefined
+            },
+            round: { round_number: draw.round.round_number },
+            created_at: draw.created_at,
+            updated_at: draw.updated_at
+          } as Draw;
+        })
+        .filter((draw): draw is Draw => draw !== null);
       
       setDraws(typedDraws);
     } catch (error) {
