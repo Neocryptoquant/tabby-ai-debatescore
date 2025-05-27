@@ -66,6 +66,17 @@ const Teams = () => {
     toast.info("Team statistics feature coming soon!");
   };
 
+  // Transform teams data to match the TeamsList component interface
+  const transformedTeams = teams.map(team => ({
+    id: team.id,
+    name: team.name,
+    institution: team.institution || '',
+    speaker1_name: team.speaker_1 || '',
+    speaker2_name: team.speaker_2 || '',
+    speaker3_name: '',
+    speaker4_name: ''
+  }));
+
   return (
     <MainLayout>
       <PageHeader 
@@ -105,7 +116,7 @@ const Teams = () => {
 
         <TabsContent value="manage" className="space-y-6">
           <TeamsList
-            teams={teams}
+            teams={transformedTeams}
             onEdit={handleEditTeam}
             onDelete={handleDeleteTeam}
             isLoading={isLoading}

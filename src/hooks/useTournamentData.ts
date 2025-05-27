@@ -22,6 +22,8 @@ interface Round {
   info_slide?: string;
   start_time?: string;
   status: 'upcoming' | 'active' | 'completed';
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface Team {
@@ -31,6 +33,8 @@ interface Team {
   institution?: string;
   speaker_1?: string;
   speaker_2?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface Draw {
@@ -46,6 +50,8 @@ interface Draw {
   gov_team: Team;
   opp_team: Team;
   round: { round_number: number };
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const useTournamentData = (tournamentId?: string) => {
@@ -87,7 +93,12 @@ export const useTournamentData = (tournamentId?: string) => {
         .order('round_number');
 
       if (error) throw error;
-      setRounds(data || []);
+      // Type assertion to ensure status matches our interface
+      const typedRounds = (data || []).map(round => ({
+        ...round,
+        status: round.status as 'upcoming' | 'active' | 'completed'
+      }));
+      setRounds(typedRounds);
     } catch (error) {
       console.error('Error fetching rounds:', error);
       toast.error('Failed to fetch rounds');
@@ -124,17 +135,28 @@ export const useTournamentData = (tournamentId?: string) => {
           opp_team:opp_team_id(id, name, institution),
           round:round_id(round_number)
         `)
-        .eq('round_id', 'ANY(SELECT id FROM rounds WHERE tournament_id = $1)', tournamentId);
+        .in('round_id', 
+          await supabase
+            .from('rounds')
+            .select('id')
+            .eq('tournament_id', tournamentId)
+            .then(({ data }) => data?.map(r => r.id) || [])
+        );
 
       if (error) throw error;
-      setDraws(data || []);
+      // Type assertion to ensure status matches our interface
+      const typedDraws = (data || []).map(draw => ({
+        ...draw,
+        status: draw.status as 'pending' | 'in_progress' | 'completed'
+      }));
+      setDraws(typedDraws);
     } catch (error) {
       console.error('Error fetching draws:', error);
       toast.error('Failed to fetch draws');
     }
   };
 
-  const addRound = async (roundData: Omit<Round, 'id' | 'tournament_id'>) => {
+  const addRound = async (roundData: Omit<Round, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>) => {
     if (!tournamentId) return;
 
     try {
@@ -145,9 +167,13 @@ export const useTournamentData = (tournamentId?: string) => {
         .single();
 
       if (error) throw error;
-      setRounds(prev => [...prev, data].sort((a, b) => a.round_number - b.round_number));
+      const typedRound = {
+        ...data,
+        status: data.status as 'upcoming' | 'active' | 'completed'
+      };
+      setRounds(prev => [...prev, typedRound].sort((a, b) => a.round_number - b.round_number));
       toast.success('Round added successfully!');
-      return data;
+      return typedRound;
     } catch (error) {
       console.error('Error adding round:', error);
       toast.error('Failed to add round');
@@ -155,7 +181,7 @@ export const useTournamentData = (tournamentId?: string) => {
     }
   };
 
-  const addTeam = async (teamData: Omit<Team, 'id' | 'tournament_id'>) => {
+  const addTeam = async (teamData: Omit<Team, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>) => {
     if (!tournamentId) return;
 
     try {
@@ -184,10 +210,11 @@ export const useTournamentData = (tournamentId?: string) => {
 
     try {
       // Delete existing draws for this tournament
+      const roundIds = rounds.map(r => r.id);
       await supabase
         .from('draws')
         .delete()
-        .in('round_id', rounds.map(r => r.id));
+        .in('round_id', roundIds);
 
       const newDraws = [];
       const availableRooms = ['Room A', 'Room B', 'Room C', 'Room D', 'Room E'];
