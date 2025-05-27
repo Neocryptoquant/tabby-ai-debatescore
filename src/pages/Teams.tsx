@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -5,6 +6,7 @@ import PageHeader from "@/components/layout/PageHeader";
 import { AIAssistant } from "@/components/ai/AIAssistant";
 import { TeamForm } from "@/components/teams/TeamForm";
 import { TeamsList } from "@/components/teams/TeamsList";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +14,9 @@ import { Users, UserPlus, Upload, BarChart3 } from "lucide-react";
 import { useTournamentData } from "@/hooks/useTournamentData";
 import { toast } from "sonner";
 
+/**
+ * Interface for team form data input
+ */
 interface TeamFormData {
   name: string;
   institution: string;
@@ -23,7 +28,7 @@ interface TeamFormData {
 
 /**
  * Teams management page for tournament administration
- * Handles team registration, viewing, and statistics
+ * Handles team registration, viewing, and statistics with proper loading states
  */
 const Teams = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,7 +42,7 @@ const Teams = () => {
   } = useTournamentData(id);
 
   /**
-   * Handles adding a new team with proper error handling and user feedback
+   * Handles adding a new team with proper error handling and loading states
    */
   const handleAddTeam = async (data: TeamFormData) => {
     setIsSaving(true);
@@ -56,6 +61,9 @@ const Teams = () => {
     }
   };
 
+  /**
+   * Placeholder for team editing functionality
+   */
   const handleEditTeam = (team: any) => {
     toast.info("📝 Edit functionality coming soon!", {
       description: "Team editing will be available in the next update"
@@ -63,16 +71,25 @@ const Teams = () => {
     console.log('Edit team:', team);
   };
 
+  /**
+   * Handles team deletion with confirmation
+   */
   const handleDeleteTeam = async (teamId: string) => {
     await deleteTeam(teamId);
   };
 
+  /**
+   * Placeholder for bulk import functionality
+   */
   const handleBulkImport = () => {
     toast.info("📁 Bulk import feature coming soon!", {
       description: "CSV import will be available in the next update"
     });
   };
 
+  /**
+   * Placeholder for team statistics generation
+   */
   const generateTeamStats = () => {
     toast.info("📊 Team statistics feature coming soon!", {
       description: "Advanced analytics will be available soon"
@@ -128,12 +145,20 @@ const Teams = () => {
         </TabsList>
 
         <TabsContent value="manage" className="space-y-6">
-          <TeamsList
-            teams={transformedTeams}
-            onEdit={handleEditTeam}
-            onDelete={handleDeleteTeam}
-            isLoading={isLoading}
-          />
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <LoadingSpinner size="lg" text="Loading teams..." />
+              </CardContent>
+            </Card>
+          ) : (
+            <TeamsList
+              teams={transformedTeams}
+              onEdit={handleEditTeam}
+              onDelete={handleDeleteTeam}
+              isLoading={isLoading}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="add" className="space-y-6">
@@ -187,7 +212,7 @@ const Teams = () => {
                 <Card>
                   <CardContent className="p-4">
                     <div className="text-2xl font-bold text-tabby-secondary">
-                      {new Set(teams.map(t => t.institution)).size}
+                      {new Set(teams.map(t => t.institution).filter(Boolean)).size}
                     </div>
                     <div className="text-sm text-gray-500">Institutions</div>
                   </CardContent>

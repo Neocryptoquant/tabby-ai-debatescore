@@ -1,8 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+/**
+ * Tournament interface matching the database schema
+ */
 interface Tournament {
   id: string;
   name: string;
@@ -12,8 +14,17 @@ interface Tournament {
   end_date?: string;
   location?: string;
   format?: string;
+  created_by: string;
+  team_count?: number;
+  round_count?: number;
+  motions_per_round?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
+/**
+ * Round interface with proper status typing
+ */
 interface Round {
   id: string;
   tournament_id: string;
@@ -26,6 +37,9 @@ interface Round {
   updated_at?: string;
 }
 
+/**
+ * Team interface matching database schema
+ */
 interface Team {
   id: string;
   tournament_id: string;
@@ -37,6 +51,9 @@ interface Team {
   updated_at?: string;
 }
 
+/**
+ * Draw interface with proper relationships
+ */
 interface Draw {
   id: string;
   round_id: string;
@@ -66,7 +83,7 @@ export const useTournamentData = (tournamentId?: string) => {
   const [isLoading, setIsLoading] = useState(false);
 
   /**
-   * Fetches tournament details from the database
+   * Fetches tournament details from the database with proper error handling
    */
   const fetchTournament = async () => {
     if (!tournamentId) return;
@@ -79,8 +96,30 @@ export const useTournamentData = (tournamentId?: string) => {
         .eq('id', tournamentId)
         .single();
 
-      if (error) throw error;
-      setTournament(data);
+      if (error) {
+        console.error('Error fetching tournament:', error);
+        throw error;
+      }
+      
+      // Type assertion with proper validation
+      const typedTournament: Tournament = {
+        id: data.id,
+        name: data.name,
+        description: data.description || undefined,
+        status: data.status || undefined,
+        start_date: data.start_date || undefined,
+        end_date: data.end_date || undefined,
+        location: data.location || undefined,
+        format: data.format || undefined,
+        created_by: data.created_by,
+        team_count: data.team_count || undefined,
+        round_count: data.round_count || undefined,
+        motions_per_round: data.motions_per_round || undefined,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+      
+      setTournament(typedTournament);
     } catch (error) {
       console.error('Error fetching tournament:', error);
       toast.error('Failed to fetch tournament data');
@@ -90,7 +129,7 @@ export const useTournamentData = (tournamentId?: string) => {
   };
 
   /**
-   * Fetches all rounds for the current tournament
+   * Fetches all rounds for the current tournament with proper typing
    */
   const fetchRounds = async () => {
     if (!tournamentId) return;
@@ -102,12 +141,24 @@ export const useTournamentData = (tournamentId?: string) => {
         .eq('tournament_id', tournamentId)
         .order('round_number');
 
-      if (error) throw error;
-      // Type assertion to ensure status matches our interface
-      const typedRounds = (data || []).map(round => ({
-        ...round,
-        status: round.status as 'upcoming' | 'active' | 'completed'
+      if (error) {
+        console.error('Error fetching rounds:', error);
+        throw error;
+      }
+      
+      // Proper type casting with validation
+      const typedRounds: Round[] = (data || []).map(round => ({
+        id: round.id,
+        tournament_id: round.tournament_id,
+        round_number: round.round_number,
+        motion: round.motion,
+        info_slide: round.info_slide || undefined,
+        start_time: round.start_time || undefined,
+        status: (round.status as 'upcoming' | 'active' | 'completed') || 'upcoming',
+        created_at: round.created_at,
+        updated_at: round.updated_at
       }));
+      
       setRounds(typedRounds);
     } catch (error) {
       console.error('Error fetching rounds:', error);
@@ -116,7 +167,7 @@ export const useTournamentData = (tournamentId?: string) => {
   };
 
   /**
-   * Fetches all teams for the current tournament
+   * Fetches all teams for the current tournament with proper typing
    */
   const fetchTeams = async () => {
     if (!tournamentId) return;
@@ -128,8 +179,24 @@ export const useTournamentData = (tournamentId?: string) => {
         .eq('tournament_id', tournamentId)
         .order('name');
 
-      if (error) throw error;
-      setTeams(data || []);
+      if (error) {
+        console.error('Error fetching teams:', error);
+        throw error;
+      }
+      
+      // Proper type mapping
+      const typedTeams: Team[] = (data || []).map(team => ({
+        id: team.id,
+        tournament_id: team.tournament_id,
+        name: team.name,
+        institution: team.institution || undefined,
+        speaker_1: team.speaker_1 || undefined,
+        speaker_2: team.speaker_2 || undefined,
+        created_at: team.created_at,
+        updated_at: team.updated_at
+      }));
+      
+      setTeams(typedTeams);
     } catch (error) {
       console.error('Error fetching teams:', error);
       toast.error('Failed to fetch teams');
@@ -138,7 +205,7 @@ export const useTournamentData = (tournamentId?: string) => {
 
   /**
    * Fetches all draws for the current tournament with related team and round data
-   * Fixed to properly handle multiple foreign key relationships
+   * Uses explicit foreign key relationships to avoid Supabase ambiguity
    */
   const fetchDraws = async () => {
     if (!tournamentId) return;
@@ -150,7 +217,10 @@ export const useTournamentData = (tournamentId?: string) => {
         .select('id')
         .eq('tournament_id', tournamentId);
 
-      if (roundError) throw roundError;
+      if (roundError) {
+        console.error('Error fetching round IDs:', roundError);
+        throw roundError;
+      }
       
       const roundIds = roundData?.map(r => r.id) || [];
       
@@ -159,36 +229,85 @@ export const useTournamentData = (tournamentId?: string) => {
         return;
       }
 
-      // Fetch draws with proper foreign key hints to avoid ambiguity
+      // Fetch draws with explicit foreign key references to avoid ambiguity
       const { data, error } = await supabase
         .from('draws')
         .select(`
-          *,
-          gov_team:teams!draws_gov_team_id_fkey(id, name, institution, tournament_id, speaker_1, speaker_2),
-          opp_team:teams!draws_opp_team_id_fkey(id, name, institution, tournament_id, speaker_1, speaker_2),
+          id,
+          round_id,
+          room,
+          gov_team_id,
+          opp_team_id,
+          judge,
+          status,
+          gov_score,
+          opp_score,
+          created_at,
+          updated_at,
+          gov_team:teams!draws_gov_team_id_fkey(
+            id,
+            name,
+            institution,
+            tournament_id,
+            speaker_1,
+            speaker_2
+          ),
+          opp_team:teams!draws_opp_team_id_fkey(
+            id,
+            name,
+            institution,
+            tournament_id,
+            speaker_1,
+            speaker_2
+          ),
           round:rounds!draws_round_id_fkey(round_number)
         `)
         .in('round_id', roundIds);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching draws:', error);
+        throw error;
+      }
       
-      // Properly type the draws data with proper error handling
-      const typedDraws: Draw[] = (data || []).map(draw => ({
-        id: draw.id,
-        round_id: draw.round_id,
-        room: draw.room,
-        gov_team_id: draw.gov_team_id,
-        opp_team_id: draw.opp_team_id,
-        judge: draw.judge,
-        status: draw.status as 'pending' | 'in_progress' | 'completed',
-        gov_score: draw.gov_score,
-        opp_score: draw.opp_score,
-        gov_team: draw.gov_team as Team,
-        opp_team: draw.opp_team as Team,
-        round: draw.round as { round_number: number },
-        created_at: draw.created_at,
-        updated_at: draw.updated_at
-      }));
+      // Properly type the draws data with validation
+      const typedDraws: Draw[] = (data || []).map(draw => {
+        // Validate that required relationships exist
+        if (!draw.gov_team || !draw.opp_team || !draw.round) {
+          console.warn('Draw missing required relationships:', draw);
+          return null;
+        }
+
+        return {
+          id: draw.id,
+          round_id: draw.round_id,
+          room: draw.room,
+          gov_team_id: draw.gov_team_id,
+          opp_team_id: draw.opp_team_id,
+          judge: draw.judge || undefined,
+          status: (draw.status as 'pending' | 'in_progress' | 'completed') || 'pending',
+          gov_score: draw.gov_score || undefined,
+          opp_score: draw.opp_score || undefined,
+          gov_team: {
+            id: draw.gov_team.id,
+            tournament_id: draw.gov_team.tournament_id,
+            name: draw.gov_team.name,
+            institution: draw.gov_team.institution || undefined,
+            speaker_1: draw.gov_team.speaker_1 || undefined,
+            speaker_2: draw.gov_team.speaker_2 || undefined
+          },
+          opp_team: {
+            id: draw.opp_team.id,
+            tournament_id: draw.opp_team.tournament_id,
+            name: draw.opp_team.name,
+            institution: draw.opp_team.institution || undefined,
+            speaker_1: draw.opp_team.speaker_1 || undefined,
+            speaker_2: draw.opp_team.speaker_2 || undefined
+          },
+          round: { round_number: draw.round.round_number },
+          created_at: draw.created_at,
+          updated_at: draw.updated_at
+        };
+      }).filter((draw): draw is Draw => draw !== null);
       
       setDraws(typedDraws);
     } catch (error) {
@@ -198,7 +317,7 @@ export const useTournamentData = (tournamentId?: string) => {
   };
 
   /**
-   * Adds a new round to the tournament with user feedback
+   * Adds a new round to the tournament with enhanced user feedback
    */
   const addRound = async (roundData: Omit<Round, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>) => {
     if (!tournamentId) return;
@@ -210,14 +329,25 @@ export const useTournamentData = (tournamentId?: string) => {
         .select()
         .single();
 
-      if (error) throw error;
-      const typedRound = {
-        ...data,
-        status: data.status as 'upcoming' | 'active' | 'completed'
+      if (error) {
+        console.error('Error adding round:', error);
+        throw error;
+      }
+      
+      const typedRound: Round = {
+        id: data.id,
+        tournament_id: data.tournament_id,
+        round_number: data.round_number,
+        motion: data.motion,
+        info_slide: data.info_slide || undefined,
+        start_time: data.start_time || undefined,
+        status: (data.status as 'upcoming' | 'active' | 'completed') || 'upcoming',
+        created_at: data.created_at,
+        updated_at: data.updated_at
       };
+      
       setRounds(prev => [...prev, typedRound].sort((a, b) => a.round_number - b.round_number));
       
-      // Enhanced success feedback with animation
       toast.success('🎯 Round added successfully!', {
         description: `Round ${roundData.round_number} has been created`,
         duration: 3000,
@@ -235,7 +365,7 @@ export const useTournamentData = (tournamentId?: string) => {
   };
 
   /**
-   * Adds a new team to the tournament with user feedback
+   * Adds a new team to the tournament with enhanced user feedback
    */
   const addTeam = async (teamData: Omit<Team, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>) => {
     if (!tournamentId) return;
@@ -247,16 +377,30 @@ export const useTournamentData = (tournamentId?: string) => {
         .select()
         .single();
 
-      if (error) throw error;
-      setTeams(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      if (error) {
+        console.error('Error adding team:', error);
+        throw error;
+      }
       
-      // Enhanced success feedback with animation
+      const typedTeam: Team = {
+        id: data.id,
+        tournament_id: data.tournament_id,
+        name: data.name,
+        institution: data.institution || undefined,
+        speaker_1: data.speaker_1 || undefined,
+        speaker_2: data.speaker_2 || undefined,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+      
+      setTeams(prev => [...prev, typedTeam].sort((a, b) => a.name.localeCompare(b.name)));
+      
       toast.success('👥 Team added successfully!', {
-        description: `${teamData.name} from ${teamData.institution} has been registered`,
+        description: `${teamData.name} ${teamData.institution ? `from ${teamData.institution}` : ''} has been registered`,
         duration: 3000,
       });
       
-      return data;
+      return typedTeam;
     } catch (error) {
       console.error('Error adding team:', error);
       toast.error('❌ Failed to add team', {
@@ -268,7 +412,7 @@ export const useTournamentData = (tournamentId?: string) => {
   };
 
   /**
-   * Generates draws for all rounds in the tournament
+   * Generates draws for all rounds in the tournament with proper validation
    */
   const generateDraws = async () => {
     if (!tournamentId || teams.length < 2 || rounds.length === 0) {
@@ -282,13 +426,18 @@ export const useTournamentData = (tournamentId?: string) => {
     try {
       // Delete existing draws for this tournament
       const roundIds = rounds.map(r => r.id);
-      await supabase
+      const { error: deleteError } = await supabase
         .from('draws')
         .delete()
         .in('round_id', roundIds);
 
+      if (deleteError) {
+        console.error('Error deleting existing draws:', deleteError);
+        throw deleteError;
+      }
+
       const newDraws = [];
-      const availableRooms = ['Room A', 'Room B', 'Room C', 'Room D', 'Room E'];
+      const availableRooms = ['Room A', 'Room B', 'Room C', 'Room D', 'Room E', 'Room F', 'Room G', 'Room H'];
 
       for (const round of rounds) {
         const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
@@ -306,15 +455,17 @@ export const useTournamentData = (tournamentId?: string) => {
         }
       }
 
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('draws')
         .insert(newDraws);
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('Error inserting new draws:', insertError);
+        throw insertError;
+      }
       
       await fetchDraws();
       
-      // Enhanced success feedback
       toast.success('🎲 Draws generated successfully!', {
         description: `Generated ${newDraws.length} pairings across ${rounds.length} rounds`,
         duration: 3000,
@@ -329,7 +480,7 @@ export const useTournamentData = (tournamentId?: string) => {
   };
 
   /**
-   * Deletes a round from the tournament
+   * Deletes a round from the tournament with confirmation
    */
   const deleteRound = async (roundId: string) => {
     try {
@@ -338,7 +489,11 @@ export const useTournamentData = (tournamentId?: string) => {
         .delete()
         .eq('id', roundId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting round:', error);
+        throw error;
+      }
+      
       setRounds(prev => prev.filter(round => round.id !== roundId));
       
       toast.success('🗑️ Round deleted successfully!', {
@@ -353,7 +508,7 @@ export const useTournamentData = (tournamentId?: string) => {
   };
 
   /**
-   * Deletes a team from the tournament
+   * Deletes a team from the tournament with confirmation
    */
   const deleteTeam = async (teamId: string) => {
     try {
@@ -362,7 +517,11 @@ export const useTournamentData = (tournamentId?: string) => {
         .delete()
         .eq('id', teamId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting team:', error);
+        throw error;
+      }
+      
       setTeams(prev => prev.filter(team => team.id !== teamId));
       
       toast.success('🗑️ Team deleted successfully!', {
