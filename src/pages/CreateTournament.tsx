@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -18,9 +17,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { AIAssistant } from "@/components/ai/AIAssistant";
+import { TournamentSettingsForm } from "@/components/forms/TournamentSettingsForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
+import { BreakCategory } from "@/types/tournament";
 import {
   Card,
   CardContent,
@@ -36,24 +37,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
 
 const CreateTournament = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { canCreateTournaments, isLoading: roleLoading } = useUserRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    format: "",
-    startDate: "",
-    endDate: "",
-    location: "",
-    description: "",
-    teamCount: "",
-    roundCount: "",
-    motionsPerRound: "",
-    useAI: true,
+  const [breakCategories, setBreakCategories] = useState<BreakCategory[]>([]);
+
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      format: "",
+      startDate: "",
+      endDate: "",
+      location: "",
+      description: "",
+      teamCount: "",
+      roundCount: "",
+      motionsPerRound: "",
+      breakType: "none",
+      useAI: true,
+    },
   });
+
+  const { register, handleSubmit, setValue, watch } = form;
 
   // Redirect if user cannot create tournaments
   if (!roleLoading && !canCreateTournaments && user) {
@@ -73,18 +82,11 @@ const CreateTournament = () => {
     );
   }
   
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-  
   const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setValue(name as any, value);
   };
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const onSubmit = async (data: any) => {
     if (!user) {
       toast.error("You must be logged in to create a tournament");
       return;
@@ -98,18 +100,19 @@ const CreateTournament = () => {
     setIsSubmitting(true);
     
     try {
-      const { data, error } = await supabase
+      const { data: tournamentData, error } = await supabase
         .from('tournaments')
         .insert({
-          name: formData.name,
-          format: formData.format,
-          start_date: formData.startDate || null,
-          end_date: formData.endDate || null,
-          location: formData.location || null,
-          description: formData.description || null,
-          team_count: formData.teamCount ? parseInt(formData.teamCount) : null,
-          round_count: formData.roundCount ? parseInt(formData.roundCount) : null,
-          motions_per_round: formData.motionsPerRound ? parseInt(formData.motionsPerRound) : 1,
+          name: data.name,
+          format: data.format,
+          start_date: data.startDate || null,
+          end_date: data.endDate || null,
+          location: data.location || null,
+          description: data.description || null,
+          team_count: data.teamCount ? parseInt(data.teamCount) : null,
+          round_count: data.roundCount ? parseInt(data.roundCount) : null,
+          motions_per_round: data.motionsPerRound ? parseInt(data.motionsPerRound) : 1,
+          break_type: data.breakType || 'none',
           created_by: user.id,
           status: 'upcoming'
         })
@@ -123,7 +126,7 @@ const CreateTournament = () => {
       }
 
       toast.success("Tournament created successfully!");
-      navigate(`/tournaments/${data.id}`);
+      navigate(`/tournaments/${tournamentData.id}`);
     } catch (error) {
       console.error('Tournament creation error:', error);
       toast.error("Failed to create tournament. Please try again.");
@@ -148,7 +151,7 @@ const CreateTournament = () => {
         }
       />
       
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Information */}
@@ -162,11 +165,8 @@ const CreateTournament = () => {
                   <Label htmlFor="name">Tournament Name</Label>
                   <Input
                     id="name"
-                    name="name"
+                    {...register("name", { required: true })}
                     placeholder="e.g. International Debating Championship 2025"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
                   />
                 </div>
                 
@@ -175,7 +175,7 @@ const CreateTournament = () => {
                     <Label htmlFor="format">Debate Format</Label>
                     <Select 
                       name="format" 
-                      value={formData.format}
+                      value={watch("format")}
                       onValueChange={(value) => handleSelectChange("format", value)}
                     >
                       <SelectTrigger>
@@ -197,11 +197,9 @@ const CreateTournament = () => {
                       <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
                         id="location"
-                        name="location"
+                        {...register("location")}
                         placeholder="City, Country"
                         className="pl-10"
-                        value={formData.location}
-                        onChange={handleChange}
                       />
                     </div>
                   </div>
@@ -214,11 +212,9 @@ const CreateTournament = () => {
                       <CalendarDays className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
                         id="startDate"
-                        name="startDate"
+                        {...register("startDate")}
                         type="date"
                         className="pl-10"
-                        value={formData.startDate}
-                        onChange={handleChange}
                       />
                     </div>
                   </div>
@@ -229,11 +225,9 @@ const CreateTournament = () => {
                       <CalendarDays className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
                         id="endDate"
-                        name="endDate"
+                        {...register("endDate")}
                         type="date"
                         className="pl-10"
-                        value={formData.endDate}
-                        onChange={handleChange}
                       />
                     </div>
                   </div>
@@ -243,74 +237,20 @@ const CreateTournament = () => {
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
-                    name="description"
+                    {...register("description")}
                     placeholder="Add details about your tournament..."
                     rows={3}
-                    value={formData.description}
-                    onChange={handleChange}
                   />
                 </div>
               </CardContent>
             </Card>
             
-            {/* Tournament Structure */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Tournament Structure</CardTitle>
-                <CardDescription>Configure how the tournament will be structured</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="teamCount">Number of Teams</Label>
-                    <div className="relative">
-                      <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        id="teamCount"
-                        name="teamCount"
-                        type="number"
-                        className="pl-10"
-                        value={formData.teamCount}
-                        onChange={handleChange}
-                        min="4"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="roundCount">Number of Rounds</Label>
-                    <div className="relative">
-                      <Layers className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        id="roundCount"
-                        name="roundCount"
-                        type="number"
-                        className="pl-10"
-                        value={formData.roundCount}
-                        onChange={handleChange}
-                        min="1"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="motionsPerRound">Motions per Round</Label>
-                    <div className="relative">
-                      <Award className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        id="motionsPerRound"
-                        name="motionsPerRound"
-                        type="number"
-                        className="pl-10"
-                        value={formData.motionsPerRound}
-                        onChange={handleChange}
-                        min="1"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Tournament Structure with Break Categories */}
+            <TournamentSettingsForm 
+              form={form}
+              breakCategories={breakCategories}
+              setBreakCategories={setBreakCategories}
+            />
           </div>
           
           <div className="space-y-6">
@@ -378,8 +318,8 @@ const CreateTournament = () => {
                     <input
                       id="ai-prediction"
                       type="checkbox"
-                      checked={formData.useAI}
-                      onChange={() => setFormData({ ...formData, useAI: !formData.useAI })}
+                      checked={watch("useAI")}
+                      onChange={() => setValue("useAI", !watch("useAI"))}
                       className="h-4 w-4 rounded border-gray-300 text-tabby-secondary focus:ring-tabby-secondary"
                     />
                   </div>
@@ -394,8 +334,8 @@ const CreateTournament = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-500">
-                  You're creating a {formData.format ? formData.format.toUpperCase() : "[Format]"} format tournament with{" "}
-                  {formData.teamCount || "[N]"} teams and {formData.roundCount || "[N]"} rounds.
+                  You're creating a {watch("format") ? watch("format").toUpperCase() : "[Format]"} format tournament with{" "}
+                  {watch("teamCount") || "[N]"} teams and {watch("roundCount") || "[N]"} rounds.
                 </p>
               </CardContent>
               <CardFooter>

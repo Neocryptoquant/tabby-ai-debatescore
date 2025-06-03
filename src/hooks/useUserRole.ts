@@ -60,9 +60,21 @@ export function useUserRole() {
     fetchUserRole();
   }, [user]);
 
+  // Permission check that includes tournament ownership
+  const canEditTournament = (tournamentCreatedBy?: string) => {
+    // Tab masters and assistants can edit any tournament
+    if (role === 'tab_master' || role === 'assistant') {
+      return true;
+    }
+    // Tournament creators can edit their own tournaments
+    if (user && tournamentCreatedBy && user.id === tournamentCreatedBy) {
+      return true;
+    }
+    return false;
+  };
+
   // Permission checks based on user role
   const canCreateTournaments = role === 'tab_master' || role === 'assistant';
-  const canEditTournaments = role === 'tab_master' || role === 'assistant';
   const canDeleteTournaments = role === 'tab_master';
   const isTabMaster = role === 'tab_master';
   const isAssistant = role === 'assistant';
@@ -80,7 +92,7 @@ export function useUserRole() {
     role,
     isLoading,
     canCreateTournaments,
-    canEditTournaments,
+    canEditTournament,
     canDeleteTournaments,
     isTabMaster,
     isAssistant,

@@ -11,9 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TournamentSettingsForm } from "@/components/forms/TournamentSettingsForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
+import { BreakCategory } from "@/types/tournament";
 
 // Tournament form data interface
 interface TournamentFormData {
@@ -26,6 +28,7 @@ interface TournamentFormData {
   team_count: number;
   round_count: number;
   motions_per_round: number;
+  break_type: "finals" | "semis" | "quarters" | "none";
   status: "active" | "upcoming" | "completed";
 }
 
@@ -40,6 +43,7 @@ interface Tournament {
   description: string | null;
   team_count: number | null;
   round_count: number | null;
+  break_type: string | null;
   status: string | null;
   created_by: string;
   created_at: string;
@@ -49,18 +53,13 @@ interface Tournament {
 const EditTournament = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { canEditTournaments } = useUserRole();
+  const { canEditTournament } = useUserRole();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [breakCategories, setBreakCategories] = useState<BreakCategory[]>([]);
 
   // React Hook Form setup with proper typing
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<TournamentFormData>({
+  const form = useForm<TournamentFormData>({
     defaultValues: {
       name: "",
       format: "bp",
@@ -71,9 +70,12 @@ const EditTournament = () => {
       team_count: 16,
       round_count: 6,
       motions_per_round: 1,
+      break_type: "none",
       status: "upcoming",
     },
   });
+
+  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = form;
 
   // Load tournament data when component mounts
   useEffect(() => {
@@ -82,13 +84,13 @@ const EditTournament = () => {
     }
   }, [id]);
 
-  // Check permissions
+  // Check permissions after tournament is loaded
   useEffect(() => {
-    if (!canEditTournaments) {
-      toast.error("You don't have permission to edit tournaments");
+    if (tournament && !canEditTournament(tournament.created_by)) {
+      toast.error("You don't have permission to edit this tournament");
       navigate(`/tournaments/${id}`);
     }
-  }, [canEditTournaments, navigate, id]);
+  }, [tournament, canEditTournament, navigate, id]);
 
   // Fetch tournament from database
   const fetchTournament = async () => {
@@ -121,7 +123,8 @@ const EditTournament = () => {
         description: data.description || "",
         team_count: data.team_count || 16,
         round_count: data.round_count || 6,
-        motions_per_round: 1, // Default value since this might not be in DB yet
+        motions_per_round: 1,
+        break_type: (data.break_type as "finals" | "semis" | "quarters" | "none") || "none",
         status: (data.status as "active" | "upcoming" | "completed") || "upcoming",
       };
 
@@ -146,7 +149,7 @@ const EditTournament = () => {
     try {
       console.log('Updating tournament with data:', data);
 
-      // Prepare update data, excluding fields that might not exist in DB schema
+      // Prepare update data
       const updateData = {
         name: data.name,
         format: data.format,
@@ -156,6 +159,7 @@ const EditTournament = () => {
         description: data.description,
         team_count: data.team_count,
         round_count: data.round_count,
+        break_type: data.break_type,
         status: data.status,
         updated_at: new Date().toISOString(),
       };
@@ -310,51 +314,19 @@ const EditTournament = () => {
           </CardContent>
         </Card>
 
-        {/* Tournament Settings Card */}
+        {/* Tournament Settings with Break Categories */}
+        <TournamentSettingsForm 
+          form={form}
+          breakCategories={breakCategories}
+          setBreakCategories={setBreakCategories}
+        />
+
+        {/* Status */}
         <Card>
           <CardHeader>
-            <CardTitle>Tournament Settings</CardTitle>
+            <CardTitle>Tournament Status</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Numbers Configuration */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="team_count">Number of Teams</Label>
-                <Input
-                  id="team_count"
-                  type="number"
-                  min="2"
-                  max="256"
-                  {...register("team_count", { 
-                    valueAsNumber: true,
-                    min: { value: 2, message: "Minimum 2 teams required" },
-                    max: { value: 256, message: "Maximum 256 teams allowed" }
-                  })}
-                />
-                {errors.team_count && (
-                  <p className="text-sm text-red-600 mt-1">{errors.team_count.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="round_count">Number of Rounds</Label>
-                <Input
-                  id="round_count"
-                  type="number"
-                  min="1"
-                  max="20"
-                  {...register("round_count", { 
-                    valueAsNumber: true,
-                    min: { value: 1, message: "Minimum 1 round required" },
-                    max: { value: 20, message: "Maximum 20 rounds allowed" }
-                  })}
-                />
-                {errors.round_count && (
-                  <p className="text-sm text-red-600 mt-1">{errors.round_count.message}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Status */}
+          <CardContent>
             <div>
               <Label htmlFor="status">Tournament Status</Label>
               <Select value={watch("status")} onValueChange={(value: "active" | "upcoming" | "completed") => setValue("status", value)}>
