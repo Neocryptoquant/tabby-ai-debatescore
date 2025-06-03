@@ -112,21 +112,28 @@ const EditTournament = () => {
       }
 
       console.log('Tournament data loaded:', data);
-      setTournament(data);
+      
+      // Add break_type to the data if it's missing (for backward compatibility)
+      const tournamentData: DatabaseTournament = {
+        ...data,
+        break_type: data.break_type || null
+      };
+      
+      setTournament(tournamentData);
 
       // Populate form with tournament data, providing defaults for null values
       const formData: TournamentFormData = {
-        name: data.name || "",
-        format: data.format || "bp",
-        start_date: data.start_date || "",
-        end_date: data.end_date || "",
-        location: data.location || "",
-        description: data.description || "",
-        team_count: data.team_count || 16,
-        round_count: data.round_count || 6,
-        motions_per_round: data.motions_per_round || 1,
-        break_type: (data.break_type as "finals" | "semis" | "quarters" | "none") || "none",
-        status: (data.status as "active" | "upcoming" | "completed") || "upcoming",
+        name: tournamentData.name || "",
+        format: tournamentData.format || "bp",
+        start_date: tournamentData.start_date || "",
+        end_date: tournamentData.end_date || "",
+        location: tournamentData.location || "",
+        description: tournamentData.description || "",
+        team_count: tournamentData.team_count || 16,
+        round_count: tournamentData.round_count || 6,
+        motions_per_round: tournamentData.motions_per_round || 1,
+        break_type: (tournamentData.break_type as "finals" | "semis" | "quarters" | "none") || "none",
+        status: (tournamentData.status as "active" | "upcoming" | "completed") || "upcoming",
       };
 
       // Set form values
