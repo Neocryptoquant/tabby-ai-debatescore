@@ -32,8 +32,8 @@ interface TournamentFormData {
   status: "active" | "upcoming" | "completed";
 }
 
-// Tournament data from database interface
-interface Tournament {
+// Tournament data from database interface - updated to match database schema
+interface DatabaseTournament {
   id: string;
   name: string;
   format: string | null;
@@ -43,6 +43,7 @@ interface Tournament {
   description: string | null;
   team_count: number | null;
   round_count: number | null;
+  motions_per_round: number | null;
   break_type: string | null;
   status: string | null;
   created_by: string;
@@ -54,7 +55,7 @@ const EditTournament = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEditTournament } = useUserRole();
-  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [tournament, setTournament] = useState<DatabaseTournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [breakCategories, setBreakCategories] = useState<BreakCategory[]>([]);
 
@@ -123,7 +124,7 @@ const EditTournament = () => {
         description: data.description || "",
         team_count: data.team_count || 16,
         round_count: data.round_count || 6,
-        motions_per_round: 1,
+        motions_per_round: data.motions_per_round || 1,
         break_type: (data.break_type as "finals" | "semis" | "quarters" | "none") || "none",
         status: (data.status as "active" | "upcoming" | "completed") || "upcoming",
       };
@@ -159,6 +160,7 @@ const EditTournament = () => {
         description: data.description,
         team_count: data.team_count,
         round_count: data.round_count,
+        motions_per_round: data.motions_per_round,
         break_type: data.break_type,
         status: data.status,
         updated_at: new Date().toISOString(),
