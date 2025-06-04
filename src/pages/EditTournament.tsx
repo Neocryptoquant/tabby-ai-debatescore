@@ -113,7 +113,7 @@ const EditTournament = () => {
 
       console.log('Tournament data loaded:', data);
       
-      // Add break_type to the data if it's missing (for backward compatibility)
+      // Add break_type to the data with proper null handling
       const tournamentData: DatabaseTournament = {
         ...data,
         break_type: data.break_type || null

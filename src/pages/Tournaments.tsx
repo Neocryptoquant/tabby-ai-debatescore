@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Search, Filter, Trophy } from "lucide-react";
@@ -7,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TournamentCard } from "@/components/cards/TournamentCard";
 import { AIAssistant } from "@/components/ai/AIAssistant";
+import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useSubscription } from "@/hooks/useSubscription";
 import { toast } from "sonner";
 import {
   Select,
@@ -41,6 +44,7 @@ const Tournaments = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { canCreateTournaments } = useUserRole();
+  const { canCreateTournament } = useSubscription();
   
   useEffect(() => {
     fetchTournaments();
@@ -126,7 +130,10 @@ const Tournaments = () => {
         actions={
           canCreateTournaments ? (
             <Link to="/tournaments/create">
-              <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
+              <Button 
+                className="bg-tabby-secondary hover:bg-tabby-secondary/90"
+                disabled={!canCreateTournament}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 New Tournament
               </Button>
@@ -134,6 +141,11 @@ const Tournaments = () => {
           ) : null
         }
       />
+
+      {/* Subscription Banner */}
+      <div className="mb-6">
+        <SubscriptionBanner />
+      </div>
       
       {/* Temporary Role Manager - Remove this after assigning your role */}
       {!canCreateTournaments && (

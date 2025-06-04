@@ -138,6 +138,41 @@ export type Database = {
         }
         Relationships: []
       }
+      public_tournament_access: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          show_speaker_scores: boolean | null
+          tournament_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          show_speaker_scores?: boolean | null
+          tournament_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          show_speaker_scores?: boolean | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_tournament_access_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: true
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rounds: {
         Row: {
           created_at: string
@@ -223,8 +258,64 @@ export type Database = {
           },
         ]
       }
+      tournament_analytics: {
+        Row: {
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          metric_type: string
+          metric_value: number
+          round_id: string | null
+          team_id: string | null
+          tournament_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_type: string
+          metric_value: number
+          round_id?: string | null
+          team_id?: string | null
+          tournament_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_type?: string
+          metric_value?: number
+          round_id?: string | null
+          team_id?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_analytics_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_analytics_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_analytics_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournaments: {
         Row: {
+          break_type: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -241,6 +332,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          break_type?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -257,6 +349,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          break_type?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -291,6 +384,33 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          subscription_type: string
+          tournaments_limit: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          subscription_type?: string
+          tournaments_limit?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          subscription_type?: string
+          tournaments_limit?: number
           user_id?: string
         }
         Relationships: []
