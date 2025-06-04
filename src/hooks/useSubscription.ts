@@ -41,7 +41,16 @@ export const useSubscription = () => {
         return;
       }
 
-      setSubscription(data);
+      if (data) {
+        setSubscription({
+          id: data.id,
+          user_id: data.user_id,
+          subscription_type: data.subscription_type as 'free' | 'premium',
+          tournaments_limit: data.tournaments_limit,
+          created_at: data.created_at,
+          expires_at: data.expires_at
+        });
+      }
     } catch (error) {
       console.error('Error fetching subscription:', error);
     } finally {

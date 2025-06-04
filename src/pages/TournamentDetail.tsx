@@ -6,7 +6,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { TournamentCard } from "@/components/cards/TournamentCard";
-import { TeamsTab } from "@/components/teams/TeamsTab";
+import { TeamsTabContainer } from "@/components/teams/TeamsTabContainer";
 import { RoundsList } from "@/components/rounds/RoundsList";
 import { DrawsList } from "@/components/rounds/DrawsList";
 import { TournamentDashboard } from "@/components/analytics/TournamentDashboard";
@@ -151,15 +151,15 @@ const TournamentDetail = () => {
           </TabsContent>
 
           <TabsContent value="teams">
-            <TeamsTab tournamentId={id!} />
+            <TeamsTabContainer tournamentId={id!} />
           </TabsContent>
 
           <TabsContent value="rounds">
-            <RoundsList tournamentId={id!} />
+            <RoundsList />
           </TabsContent>
 
           <TabsContent value="draws">
-            <DrawsList tournamentId={id!} />
+            <DrawsList />
           </TabsContent>
 
           <TabsContent value="analytics">
