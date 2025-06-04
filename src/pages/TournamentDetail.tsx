@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MainLayout from "@/components/layout/MainLayout";
@@ -15,7 +15,6 @@ import { CSVUpload } from "@/components/teams/CSVUpload";
 import { useTournamentData } from "@/hooks/useTournamentData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useTournamentMutations } from "@/hooks/useTournamentMutations";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { 
   Edit, 
@@ -26,7 +25,6 @@ import {
   Users,
   Target,
   Trophy,
-  FileBarChart,
   UserPlus,
   PlusCircle
 } from "lucide-react";

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tournament, Round, Team, Draw } from '@/types/tournament';
@@ -14,7 +14,8 @@ export const useTournamentQueries = (tournamentId?: string) => {
   const [draws, setDraws] = useState<Draw[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchTournament = async () => {
+  // Memoize fetch functions to prevent infinite loops
+  const fetchTournament = useCallback(async () => {
     if (!tournamentId) return;
     
     setIsLoading(true);
@@ -54,9 +55,9 @@ export const useTournamentQueries = (tournamentId?: string) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [tournamentId]);
 
-  const fetchRounds = async () => {
+  const fetchRounds = useCallback(async () => {
     if (!tournamentId) return;
     
     try {
@@ -88,9 +89,9 @@ export const useTournamentQueries = (tournamentId?: string) => {
       console.error('Error fetching rounds:', error);
       toast.error('Failed to fetch rounds');
     }
-  };
+  }, [tournamentId]);
 
-  const fetchTeams = async () => {
+  const fetchTeams = useCallback(async () => {
     if (!tournamentId) return;
     
     try {
@@ -121,9 +122,9 @@ export const useTournamentQueries = (tournamentId?: string) => {
       console.error('Error fetching teams:', error);
       toast.error('Failed to fetch teams');
     }
-  };
+  }, [tournamentId]);
 
-  const fetchDraws = async () => {
+  const fetchDraws = useCallback(async () => {
     if (!tournamentId) return;
     
     try {
@@ -228,7 +229,7 @@ export const useTournamentQueries = (tournamentId?: string) => {
       console.error('Error fetching draws:', error);
       toast.error('Failed to fetch draws');
     }
-  };
+  }, [tournamentId]);
 
   return {
     tournament,
