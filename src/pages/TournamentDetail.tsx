@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeader from "@/components/layout/PageHeader";
@@ -26,16 +26,20 @@ import {
   Users,
   Target,
   Trophy,
-  FileBarChart
+  FileBarChart,
+  UserPlus,
+  PlusCircle
 } from "lucide-react";
 
 const TournamentDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { canEditTournament } = useUserRole();
   const { tournament, teams, rounds, draws, isLoading, addTeam, refetch } = useTournamentData(id);
   const { addTeam: addTeamMutation } = useTournamentMutations(id, undefined, undefined, undefined);
 
   const [activeTab, setActiveTab] = useState("overview");
+  const [showCSVUpload, setShowCSVUpload] = useState(false);
 
   const handleCSVUpload = async (uploadedTeams: any[]) => {
     try {
@@ -44,6 +48,7 @@ const TournamentDetail = () => {
       }
       refetch();
       toast.success('Teams uploaded successfully!');
+      setShowCSVUpload(false);
     } catch (error) {
       console.error('Error uploading teams:', error);
       toast.error('Failed to upload teams');
@@ -51,27 +56,29 @@ const TournamentDetail = () => {
   };
 
   const handleEditRound = (round: any) => {
-    // TODO: Implement edit round functionality
     console.log('Edit round:', round);
     toast.info('Edit round functionality coming soon');
   };
 
   const handleDeleteRound = (roundId: string) => {
-    // TODO: Implement delete round functionality
     console.log('Delete round:', roundId);
     toast.info('Delete round functionality coming soon');
   };
 
   const handleGenerateDraws = () => {
-    // TODO: Implement generate draws functionality
     console.log('Generate draws');
     toast.info('Generate draws functionality coming soon');
   };
 
   const handleRegenerateDraws = (roundNumber: number) => {
-    // TODO: Implement regenerate draws functionality
     console.log('Regenerate draws for round:', roundNumber);
     toast.info('Regenerate draws functionality coming soon');
+  };
+
+  const handleEditTournament = () => {
+    if (id) {
+      navigate(`/tournaments/${id}/edit`);
+    }
   };
 
   if (isLoading || !tournament) {
@@ -104,19 +111,16 @@ const TournamentDetail = () => {
         actions={
           canEdit ? (
             <div className="flex gap-2">
-              <Link to={`/tournaments/${id}/edit`}>
-                <Button variant="outline">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Tournament
-                </Button>
-              </Link>
+              <Button onClick={handleEditTournament} variant="outline">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Tournament
+              </Button>
             </div>
           ) : null
         }
       />
 
       <div className="space-y-6">
-        {/* Tournament Overview Card */}
         <TournamentCard {...tournamentCardData} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -149,10 +153,6 @@ const TournamentDetail = () => {
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {canEdit && (
-                <CSVUpload onTeamsUploaded={handleCSVUpload} />
-              )}
-              
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Quick Stats</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -174,6 +174,46 @@ const TournamentDetail = () => {
                   </div>
                 </div>
               </div>
+
+              {canEdit && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Quick Actions</h3>
+                  <div className="space-y-3">
+                    <Button
+                      onClick={() => setActiveTab("teams")}
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Teams Manually
+                    </Button>
+                    
+                    <Button
+                      onClick={() => setShowCSVUpload(!showCSVUpload)}
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Bulk Upload Teams (CSV)
+                    </Button>
+                    
+                    <Button
+                      onClick={() => setActiveTab("rounds")}
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Create Rounds
+                    </Button>
+                  </div>
+                  
+                  {showCSVUpload && (
+                    <div className="mt-4">
+                      <CSVUpload onTeamsUploaded={handleCSVUpload} />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </TabsContent>
 

@@ -3,9 +3,6 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Round, Team } from '@/types/tournament';
 
-/**
- * Custom hook for tournament data mutation operations
- */
 export const useTournamentMutations = (
   tournamentId?: string,
   setRounds?: (updater: (prev: Round[]) => Round[]) => void,
@@ -13,9 +10,14 @@ export const useTournamentMutations = (
   fetchDraws?: () => Promise<void>
 ) => {
   const addRound = async (roundData: Omit<Round, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>) => {
-    if (!tournamentId) return;
+    if (!tournamentId) {
+      console.error('No tournament ID provided for addRound');
+      return;
+    }
 
     try {
+      console.log('Adding round with data:', roundData);
+      
       const { data, error } = await supabase
         .from('rounds')
         .insert([{ ...roundData, tournament_id: tournamentId }])
@@ -26,6 +28,8 @@ export const useTournamentMutations = (
         console.error('Error adding round:', error);
         throw error;
       }
+      
+      console.log('Round added successfully:', data);
       
       const typedRound: Round = {
         id: data.id,
@@ -60,9 +64,14 @@ export const useTournamentMutations = (
   };
 
   const addTeam = async (teamData: Omit<Team, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>) => {
-    if (!tournamentId) return;
+    if (!tournamentId) {
+      console.error('No tournament ID provided for addTeam');
+      return;
+    }
 
     try {
+      console.log('Adding team with data:', teamData);
+      
       const { data, error } = await supabase
         .from('teams')
         .insert([{ ...teamData, tournament_id: tournamentId }])
@@ -73,6 +82,8 @@ export const useTournamentMutations = (
         console.error('Error adding team:', error);
         throw error;
       }
+      
+      console.log('Team added successfully:', data);
       
       const typedTeam: Team = {
         id: data.id,
@@ -107,6 +118,8 @@ export const useTournamentMutations = (
 
   const deleteRound = async (roundId: string) => {
     try {
+      console.log('Deleting round:', roundId);
+      
       const { error } = await supabase
         .from('rounds')
         .delete()
@@ -116,6 +129,8 @@ export const useTournamentMutations = (
         console.error('Error deleting round:', error);
         throw error;
       }
+      
+      console.log('Round deleted successfully');
       
       if (setRounds) {
         setRounds(prev => prev.filter(round => round.id !== roundId));
@@ -134,6 +149,8 @@ export const useTournamentMutations = (
 
   const deleteTeam = async (teamId: string) => {
     try {
+      console.log('Deleting team:', teamId);
+      
       const { error } = await supabase
         .from('teams')
         .delete()
@@ -143,6 +160,8 @@ export const useTournamentMutations = (
         console.error('Error deleting team:', error);
         throw error;
       }
+      
+      console.log('Team deleted successfully');
       
       if (setTeams) {
         setTeams(prev => prev.filter(team => team.id !== teamId));

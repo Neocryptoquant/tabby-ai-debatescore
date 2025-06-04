@@ -42,10 +42,8 @@ export function EnhancedProtectedRoute({
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // For create_tournament permission, allow if user can create tournaments
+  // For create_tournament permission, allow if user is authenticated
   if (permission === 'create_tournament') {
-    // Simple check - if authenticated, allow for now
-    // This can be enhanced later with subscription checks
     if (!isAuthenticated) {
       return <Navigate to="/unauthorized" replace />;
     }

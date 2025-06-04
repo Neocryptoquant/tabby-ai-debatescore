@@ -69,9 +69,9 @@ function App() {
                 } />
                 
                 <Route path="/tournaments/create" element={
-                  <EnhancedProtectedRoute permission="create_tournament">
+                  <ProtectedRoute>
                     <CreateTournament />
-                  </EnhancedProtectedRoute>
+                  </ProtectedRoute>
                 } />
                 
                 <Route path="/tournaments/:id" element={

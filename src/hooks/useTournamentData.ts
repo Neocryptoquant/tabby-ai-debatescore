@@ -4,10 +4,6 @@ import { useTournamentQueries } from './useTournamentQueries';
 import { useTournamentMutations } from './useTournamentMutations';
 import { useDrawsOperations } from './useDrawsOperations';
 
-/**
- * Main hook for managing tournament data including rounds, teams, draws, and related operations
- * Provides CRUD operations with proper error handling and user feedback
- */
 export const useTournamentData = (tournamentId?: string) => {
   const {
     tournament,
@@ -35,14 +31,16 @@ export const useTournamentData = (tournamentId?: string) => {
   // Load data when tournament ID changes
   useEffect(() => {
     if (tournamentId) {
+      console.log('Loading tournament data for:', tournamentId);
       fetchTournament();
       fetchRounds();
       fetchTeams();
       fetchDraws();
     }
-  }, [tournamentId]);
+  }, [tournamentId, fetchTournament, fetchRounds, fetchTeams, fetchDraws]);
 
   const refetch = () => {
+    console.log('Refetching all tournament data');
     fetchTournament();
     fetchRounds();
     fetchTeams();
