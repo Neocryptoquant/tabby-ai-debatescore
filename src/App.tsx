@@ -47,7 +47,9 @@ function App() {
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />
                 <Route path="/auth/signin" element={<SignIn />} />
+                <Route path="/auth/sign-in" element={<SignIn />} />
                 <Route path="/auth/signup" element={<SignUp />} />
+                <Route path="/auth/sign-up" element={<SignUp />} />
                 <Route path="/auth/callback" element={<Callback />} />
                 <Route path="/auth/confirmation" element={<Confirmation />} />
                 <Route path="/public/tournament/:token" element={<PublicTournament />} />

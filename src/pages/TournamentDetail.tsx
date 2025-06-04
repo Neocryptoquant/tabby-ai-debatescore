@@ -16,6 +16,7 @@ import { useTournamentData } from "@/hooks/useTournamentData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useTournamentMutations } from "@/hooks/useTournamentMutations";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { 
   Edit, 
   Settings, 
@@ -42,9 +43,35 @@ const TournamentDetail = () => {
         await addTeamMutation(team);
       }
       refetch();
+      toast.success('Teams uploaded successfully!');
     } catch (error) {
       console.error('Error uploading teams:', error);
+      toast.error('Failed to upload teams');
     }
+  };
+
+  const handleEditRound = (round: any) => {
+    // TODO: Implement edit round functionality
+    console.log('Edit round:', round);
+    toast.info('Edit round functionality coming soon');
+  };
+
+  const handleDeleteRound = (roundId: string) => {
+    // TODO: Implement delete round functionality
+    console.log('Delete round:', roundId);
+    toast.info('Delete round functionality coming soon');
+  };
+
+  const handleGenerateDraws = () => {
+    // TODO: Implement generate draws functionality
+    console.log('Generate draws');
+    toast.info('Generate draws functionality coming soon');
+  };
+
+  const handleRegenerateDraws = (roundNumber: number) => {
+    // TODO: Implement regenerate draws functionality
+    console.log('Regenerate draws for round:', roundNumber);
+    toast.info('Regenerate draws functionality coming soon');
   };
 
   if (isLoading || !tournament) {
@@ -155,11 +182,21 @@ const TournamentDetail = () => {
           </TabsContent>
 
           <TabsContent value="rounds">
-            <RoundsList />
+            <RoundsList 
+              rounds={rounds}
+              onEdit={handleEditRound}
+              onDelete={handleDeleteRound}
+              isLoading={isLoading}
+            />
           </TabsContent>
 
           <TabsContent value="draws">
-            <DrawsList />
+            <DrawsList 
+              draws={draws}
+              onGenerateDraws={handleGenerateDraws}
+              onRegenerateDraws={handleRegenerateDraws}
+              isLoading={isLoading}
+            />
           </TabsContent>
 
           <TabsContent value="analytics">

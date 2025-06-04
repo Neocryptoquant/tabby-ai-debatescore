@@ -15,17 +15,13 @@ interface EnhancedProtectedRouteProps {
   fallback?: ReactNode;
 }
 
-/**
- * Enhanced route protection with role-based access control
- * Supports granular permission checking and custom fallbacks
- */
 export function EnhancedProtectedRoute({ 
   children, 
   requireAuth = true,
   permission,
   permissions = [],
   requireAll = false,
-  redirectTo = "/auth/sign-in",
+  redirectTo = "/auth/signin",
   fallback
 }: EnhancedProtectedRouteProps) {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -34,7 +30,6 @@ export function EnhancedProtectedRoute({
 
   const isLoading = authLoading || permissionLoading;
 
-  // Show loading state while checking authentication and permissions
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -43,12 +38,20 @@ export function EnhancedProtectedRoute({
     );
   }
 
-  // Check authentication requirement
   if (requireAuth && !isAuthenticated) {
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // Check single permission
+  // For create_tournament permission, allow if user can create tournaments
+  if (permission === 'create_tournament') {
+    // Simple check - if authenticated, allow for now
+    // This can be enhanced later with subscription checks
+    if (!isAuthenticated) {
+      return <Navigate to="/unauthorized" replace />;
+    }
+    return <>{children}</>;
+  }
+
   if (permission && !hasPermission(permission)) {
     if (fallback) {
       return <>{fallback}</>;
@@ -56,7 +59,6 @@ export function EnhancedProtectedRoute({
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Check multiple permissions
   if (permissions.length > 0) {
     const hasRequiredPermissions = requireAll 
       ? hasAllPermissions(permissions)

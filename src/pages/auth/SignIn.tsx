@@ -144,7 +144,7 @@ const SignIn = () => {
           <CardFooter className="flex flex-col space-y-2">
             <div className="text-center text-sm">
               Don't have an account?{" "}
-              <Link to="/auth/sign-up" className="text-tabby-secondary hover:underline">
+              <Link to="/auth/signup" className="text-tabby-secondary hover:underline">
                 Sign up
               </Link>
             </div>
