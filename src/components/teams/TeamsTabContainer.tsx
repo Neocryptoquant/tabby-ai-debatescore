@@ -23,7 +23,12 @@ export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
   const handleAddTeam = async (data: any) => {
     setIsSaving(true);
     try {
-      await addTeam(data);
+      await addTeam({
+        name: data.name,
+        institution: data.institution || '',
+        speaker_1: data.speaker_1 || '',
+        speaker_2: data.speaker_2 || ''
+      });
       toast.success('Team added successfully!');
     } catch (error) {
       console.error('Error adding team:', error);
@@ -34,7 +39,7 @@ export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
   };
 
   const handleEditTeam = (team: any) => {
-    // TODO: Implement edit functionality
+    toast.info('Edit functionality coming soon!');
     console.log('Edit team:', team);
   };
 
@@ -49,12 +54,11 @@ export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
   };
 
   const handleBulkImport = () => {
-    // TODO: Implement bulk import
-    console.log('Bulk import teams');
+    toast.info('Use the CSV upload in the Overview tab for bulk import');
   };
 
   const generateTeamStats = () => {
-    // TODO: Implement team stats generation
+    toast.info('Team stats generation coming soon!');
     console.log('Generate team stats');
   };
 

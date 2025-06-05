@@ -17,7 +17,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { signOut } from "@/lib/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +28,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -44,7 +44,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut: authSignOut } = useAuth();
   
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -59,7 +59,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         
       if (error) {
         console.error("Error fetching profile:", error);
-        throw error;
+        return null;
       }
       
       return data;
@@ -78,8 +78,16 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   };
   
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      toast.loading('Signing out...');
+      await authSignOut();
+      toast.dismiss();
+      toast.success('Signed out successfully');
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Failed to sign out');
+      console.error('Sign out error:', error);
+    }
   };
   
   return (
@@ -166,7 +174,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">{profile?.full_name}</p>
+                    <p className="text-sm font-medium">{profile?.full_name || 'User'}</p>
                     <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                   </div>
                 </DropdownMenuLabel>
@@ -174,12 +182,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 <DropdownMenuItem asChild>
                   <Link to="/settings" className="cursor-pointer flex w-full items-center">
                     <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                    <span>Profile Settings</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  className="cursor-pointer"
+                  className="cursor-pointer text-red-600 focus:text-red-600"
                   onClick={handleSignOut}
                 >
                   <LogOut className="mr-2 h-4 w-4" />

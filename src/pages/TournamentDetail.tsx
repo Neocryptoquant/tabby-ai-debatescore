@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,6 +47,8 @@ const TournamentDetail = () => {
     addRound,
     addJudge,
     deleteJudge,
+    deleteTeam,
+    deleteRound,
     generateDrawsWithHistory,
     generationHistory,
     isGenerating,
@@ -57,14 +60,27 @@ const TournamentDetail = () => {
   const [showCSVUpload, setShowCSVUpload] = useState(false);
 
   const handleCSVUpload = async (uploadedTeams: any[]) => {
+    if (!uploadedTeams || uploadedTeams.length === 0) {
+      toast.error('No teams to upload');
+      return;
+    }
+
     try {
+      toast.loading('Uploading teams...');
       for (const team of uploadedTeams) {
-        await addTeam(team);
+        await addTeam({
+          name: team.name,
+          institution: team.institution || '',
+          speaker_1: team.speaker_1 || '',
+          speaker_2: team.speaker_2 || ''
+        });
       }
-      refetch();
-      toast.success('Teams uploaded successfully!');
+      toast.dismiss();
+      toast.success(`Successfully uploaded ${uploadedTeams.length} teams!`);
       setShowCSVUpload(false);
+      refetch();
     } catch (error) {
+      toast.dismiss();
       console.error('Error uploading teams:', error);
       toast.error('Failed to upload teams');
     }
@@ -72,9 +88,18 @@ const TournamentDetail = () => {
 
   const handleAddRound = async (roundData: any) => {
     try {
-      await addRound(roundData);
+      toast.loading('Creating round...');
+      await addRound({
+        round_number: roundData.round_number,
+        motion: roundData.motion,
+        info_slide: roundData.info_slide || '',
+        start_time: roundData.start_time || null,
+        status: 'upcoming'
+      });
+      toast.dismiss();
       toast.success('Round created successfully!');
     } catch (error) {
+      toast.dismiss();
       console.error('Error adding round:', error);
       toast.error('Failed to create round');
     }
@@ -82,11 +107,42 @@ const TournamentDetail = () => {
 
   const handleAddJudge = async (judgeData: any) => {
     try {
-      await addJudge(judgeData);
+      toast.loading('Adding judge...');
+      await addJudge({
+        name: judgeData.name,
+        institution: judgeData.institution || '',
+        experience_level: judgeData.experience_level || 'novice'
+      });
+      toast.dismiss();
       toast.success('Judge added successfully!');
     } catch (error) {
+      toast.dismiss();
       console.error('Error adding judge:', error);
       toast.error('Failed to add judge');
+    }
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    try {
+      await deleteTeam(teamId);
+    } catch (error) {
+      console.error('Error deleting team:', error);
+    }
+  };
+
+  const handleDeleteJudge = async (judgeId: string) => {
+    try {
+      await deleteJudge(judgeId);
+    } catch (error) {
+      console.error('Error deleting judge:', error);
+    }
+  };
+
+  const handleDeleteRound = async (roundId: string) => {
+    try {
+      await deleteRound(roundId);
+    } catch (error) {
+      console.error('Error deleting round:', error);
     }
   };
 
@@ -95,7 +151,11 @@ const TournamentDetail = () => {
       toast.error('Need at least 2 teams to generate draws');
       return;
     }
-    await generateDrawsWithHistory(roundId, 'power_pairing');
+    try {
+      await generateDrawsWithHistory(roundId, 'power_pairing');
+    } catch (error) {
+      console.error('Error generating draws:', error);
+    }
   };
 
   const handleEditTournament = () => {
@@ -263,7 +323,7 @@ const TournamentDetail = () => {
             )}
             <JudgesList
               judges={judges}
-              onDelete={deleteJudge}
+              onDelete={handleDeleteJudge}
               isLoading={isLoading}
             />
           </TabsContent>
@@ -274,8 +334,8 @@ const TournamentDetail = () => {
             )}
             <RoundsList 
               rounds={rounds}
-              onEdit={(round) => toast.info('Edit round functionality coming soon')}
-              onDelete={(roundId) => toast.info('Delete round functionality coming soon')}
+              onEdit={(round) => console.log('Edit round:', round)}
+              onDelete={handleDeleteRound}
               isLoading={isLoading}
             />
           </TabsContent>
@@ -283,8 +343,13 @@ const TournamentDetail = () => {
           <TabsContent value="draws">
             <DrawsList 
               draws={draws}
-              onGenerateDraws={() => toast.info('Select a round to generate draws')}
-              onRegenerateDraws={(roundNumber) => toast.info(`Regenerate draws for round ${roundNumber} coming soon`)}
+              onGenerateDraws={handleGenerateDraws}
+              onRegenerateDraws={(roundNumber) => {
+                const round = rounds.find(r => r.round_number === roundNumber);
+                if (round) {
+                  handleGenerateDraws(round.id);
+                }
+              }}
               isLoading={isLoading || isGenerating}
             />
           </TabsContent>
