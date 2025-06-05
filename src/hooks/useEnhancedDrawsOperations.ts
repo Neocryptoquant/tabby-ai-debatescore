@@ -90,7 +90,7 @@ export const useEnhancedDrawsOperations = (
 
       // Generate new draws
       const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
-      const availableRooms = targetRound.default_rooms || ['Room A', 'Room B', 'Room C', 'Room D'];
+      const availableRooms = ['Room A', 'Room B', 'Room C', 'Room D']; // Use default rooms since Round type doesn't have default_rooms
       const availableJudges = judges || [];
       
       const newDraws = [];
