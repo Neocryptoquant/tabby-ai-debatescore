@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,9 +11,11 @@ import { DrawsList } from "@/components/rounds/DrawsList";
 import { TournamentDashboard } from "@/components/analytics/TournamentDashboard";
 import { PublicAccessPanel } from "@/components/tournament/PublicAccessPanel";
 import { CSVUpload } from "@/components/teams/CSVUpload";
+import { JudgeForm } from "@/components/judges/JudgeForm";
+import { JudgesList } from "@/components/judges/JudgesList";
+import { EnhancedRoundForm } from "@/components/rounds/EnhancedRoundForm";
 import { useTournamentData } from "@/hooks/useTournamentData";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useTournamentMutations } from "@/hooks/useTournamentMutations";
 import { toast } from "sonner";
 import { 
   Edit, 
@@ -26,15 +27,31 @@ import {
   Target,
   Trophy,
   UserPlus,
-  PlusCircle
+  PlusCircle,
+  Gavel
 } from "lucide-react";
 
 const TournamentDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canEditTournament } = useUserRole();
-  const { tournament, teams, rounds, draws, isLoading, addTeam, refetch } = useTournamentData(id);
-  const { addTeam: addTeamMutation } = useTournamentMutations(id, undefined, undefined, undefined);
+  const { 
+    tournament, 
+    teams, 
+    rounds, 
+    draws, 
+    judges,
+    isLoading, 
+    addTeam, 
+    addRound,
+    addJudge,
+    deleteJudge,
+    generateDrawsWithHistory,
+    generationHistory,
+    isGenerating,
+    updateRoundPrivacy,
+    refetch 
+  } = useTournamentData(id);
 
   const [activeTab, setActiveTab] = useState("overview");
   const [showCSVUpload, setShowCSVUpload] = useState(false);
@@ -42,7 +59,7 @@ const TournamentDetail = () => {
   const handleCSVUpload = async (uploadedTeams: any[]) => {
     try {
       for (const team of uploadedTeams) {
-        await addTeamMutation(team);
+        await addTeam(team);
       }
       refetch();
       toast.success('Teams uploaded successfully!');
@@ -53,24 +70,32 @@ const TournamentDetail = () => {
     }
   };
 
-  const handleEditRound = (round: any) => {
-    console.log('Edit round:', round);
-    toast.info('Edit round functionality coming soon');
+  const handleAddRound = async (roundData: any) => {
+    try {
+      await addRound(roundData);
+      toast.success('Round created successfully!');
+    } catch (error) {
+      console.error('Error adding round:', error);
+      toast.error('Failed to create round');
+    }
   };
 
-  const handleDeleteRound = (roundId: string) => {
-    console.log('Delete round:', roundId);
-    toast.info('Delete round functionality coming soon');
+  const handleAddJudge = async (judgeData: any) => {
+    try {
+      await addJudge(judgeData);
+      toast.success('Judge added successfully!');
+    } catch (error) {
+      console.error('Error adding judge:', error);
+      toast.error('Failed to add judge');
+    }
   };
 
-  const handleGenerateDraws = () => {
-    console.log('Generate draws');
-    toast.info('Generate draws functionality coming soon');
-  };
-
-  const handleRegenerateDraws = (roundNumber: number) => {
-    console.log('Regenerate draws for round:', roundNumber);
-    toast.info('Regenerate draws functionality coming soon');
+  const handleGenerateDraws = async (roundId: string) => {
+    if (teams.length < 2) {
+      toast.error('Need at least 2 teams to generate draws');
+      return;
+    }
+    await generateDrawsWithHistory(roundId, 'power_pairing');
   };
 
   const handleEditTournament = () => {
@@ -122,7 +147,7 @@ const TournamentDetail = () => {
         <TournamentCard {...tournamentCardData} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-6 max-w-2xl">
+          <TabsList className="grid grid-cols-7 max-w-4xl">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Overview
@@ -130,6 +155,10 @@ const TournamentDetail = () => {
             <TabsTrigger value="teams" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Teams
+            </TabsTrigger>
+            <TabsTrigger value="judges" className="flex items-center gap-2">
+              <Gavel className="h-4 w-4" />
+              Judges
             </TabsTrigger>
             <TabsTrigger value="rounds" className="flex items-center gap-2">
               <Target className="h-4 w-4" />
@@ -167,8 +196,8 @@ const TournamentDetail = () => {
                     <p className="text-2xl font-bold text-purple-900">{draws.length}</p>
                   </div>
                   <div className="bg-orange-50 p-4 rounded-lg">
-                    <p className="text-sm text-orange-600">Status</p>
-                    <p className="text-lg font-bold text-orange-900 capitalize">{tournament.status || 'Upcoming'}</p>
+                    <p className="text-sm text-orange-600">Judges Added</p>
+                    <p className="text-2xl font-bold text-orange-900">{judges.length}</p>
                   </div>
                 </div>
               </div>
@@ -183,16 +212,16 @@ const TournamentDetail = () => {
                       className="w-full justify-start"
                     >
                       <UserPlus className="h-4 w-4 mr-2" />
-                      Add Teams Manually
+                      Add Teams
                     </Button>
                     
                     <Button
-                      onClick={() => setShowCSVUpload(!showCSVUpload)}
+                      onClick={() => setActiveTab("judges")}
                       variant="outline"
                       className="w-full justify-start"
                     >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Bulk Upload Teams (CSV)
+                      <Gavel className="h-4 w-4 mr-2" />
+                      Add Judges
                     </Button>
                     
                     <Button
@@ -202,6 +231,15 @@ const TournamentDetail = () => {
                     >
                       <PlusCircle className="h-4 w-4 mr-2" />
                       Create Rounds
+                    </Button>
+                    
+                    <Button
+                      onClick={() => setShowCSVUpload(!showCSVUpload)}
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Bulk Upload Teams (Optional)
                     </Button>
                   </div>
                   
@@ -219,11 +257,25 @@ const TournamentDetail = () => {
             <TeamsTabContainer tournamentId={id!} />
           </TabsContent>
 
-          <TabsContent value="rounds">
+          <TabsContent value="judges" className="space-y-6">
+            {canEdit && (
+              <JudgeForm onSave={handleAddJudge} isLoading={isLoading} />
+            )}
+            <JudgesList
+              judges={judges}
+              onDelete={deleteJudge}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+
+          <TabsContent value="rounds" className="space-y-6">
+            {canEdit && (
+              <EnhancedRoundForm onSave={handleAddRound} isLoading={isLoading} />
+            )}
             <RoundsList 
               rounds={rounds}
-              onEdit={handleEditRound}
-              onDelete={handleDeleteRound}
+              onEdit={(round) => toast.info('Edit round functionality coming soon')}
+              onDelete={(roundId) => toast.info('Delete round functionality coming soon')}
               isLoading={isLoading}
             />
           </TabsContent>
@@ -231,9 +283,9 @@ const TournamentDetail = () => {
           <TabsContent value="draws">
             <DrawsList 
               draws={draws}
-              onGenerateDraws={handleGenerateDraws}
-              onRegenerateDraws={handleRegenerateDraws}
-              isLoading={isLoading}
+              onGenerateDraws={() => toast.info('Select a round to generate draws')}
+              onRegenerateDraws={(roundNumber) => toast.info(`Regenerate draws for round ${roundNumber} coming soon`)}
+              isLoading={isLoading || isGenerating}
             />
           </TabsContent>
 

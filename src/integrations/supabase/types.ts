@@ -9,13 +9,63 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      draw_generation_history: {
+        Row: {
+          generated_at: string | null
+          generated_by: string | null
+          generation_method: string
+          generation_params: Json | null
+          id: string
+          is_current: boolean | null
+          round_id: string
+          tournament_id: string
+        }
+        Insert: {
+          generated_at?: string | null
+          generated_by?: string | null
+          generation_method?: string
+          generation_params?: Json | null
+          id?: string
+          is_current?: boolean | null
+          round_id: string
+          tournament_id: string
+        }
+        Update: {
+          generated_at?: string | null
+          generated_by?: string | null
+          generation_method?: string
+          generation_params?: Json | null
+          id?: string
+          is_current?: boolean | null
+          round_id?: string
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draw_generation_history_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draw_generation_history_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       draws: {
         Row: {
           created_at: string
+          generation_history_id: string | null
           gov_score: number | null
           gov_team_id: string
           id: string
           judge: string | null
+          judge_id: string | null
           opp_score: number | null
           opp_team_id: string
           room: string
@@ -25,10 +75,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          generation_history_id?: string | null
           gov_score?: number | null
           gov_team_id: string
           id?: string
           judge?: string | null
+          judge_id?: string | null
           opp_score?: number | null
           opp_team_id: string
           room: string
@@ -38,10 +90,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          generation_history_id?: string | null
           gov_score?: number | null
           gov_team_id?: string
           id?: string
           judge?: string | null
+          judge_id?: string | null
           opp_score?: number | null
           opp_team_id?: string
           room?: string
@@ -51,10 +105,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "draws_generation_history_id_fkey"
+            columns: ["generation_history_id"]
+            isOneToOne: false
+            referencedRelation: "draw_generation_history"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "draws_gov_team_id_fkey"
             columns: ["gov_team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draws_judge_id_fkey"
+            columns: ["judge_id"]
+            isOneToOne: false
+            referencedRelation: "judges"
             referencedColumns: ["id"]
           },
           {
@@ -176,8 +244,11 @@ export type Database = {
       rounds: {
         Row: {
           created_at: string
+          default_rooms: string[] | null
           id: string
           info_slide: string | null
+          is_info_slide_public: boolean | null
+          is_motion_public: boolean | null
           motion: string
           round_number: number
           start_time: string | null
@@ -187,8 +258,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_rooms?: string[] | null
           id?: string
           info_slide?: string | null
+          is_info_slide_public?: boolean | null
+          is_motion_public?: boolean | null
           motion: string
           round_number: number
           start_time?: string | null
@@ -198,8 +272,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_rooms?: string[] | null
           id?: string
           info_slide?: string | null
+          is_info_slide_public?: boolean | null
+          is_motion_public?: boolean | null
           motion?: string
           round_number?: number
           start_time?: string | null
