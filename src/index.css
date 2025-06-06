@@ -91,39 +91,82 @@
 @layer base {
   * {
     @apply border-border;
-    cursor: default; /* Set default cursor for all elements */
   }
 
   body {
     @apply bg-background text-foreground font-inter;
+    cursor: default;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-outfit font-medium;
   }
 
-  /* Only show pointer cursor on truly clickable elements */
-  button, 
-  a, 
-  [role="button"], 
-  [tabindex="0"]:not(input):not(textarea):not(select),
-  .cursor-pointer {
-    cursor: pointer !important;
+  /* Clickable elements get pointer cursor */
+  button:not(:disabled), 
+  a[href], 
+  [role="button"]:not([aria-disabled="true"]), 
+  [tabindex="0"]:not(input):not(textarea):not(select):not([aria-disabled="true"]),
+  .cursor-pointer,
+  summary,
+  label[for],
+  input[type="radio"],
+  input[type="checkbox"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"] {
+    cursor: pointer;
   }
 
-  /* Input elements should have text cursor */
+  /* Text input elements get text cursor */
   input[type="text"], 
   input[type="email"], 
   input[type="password"], 
   input[type="search"], 
   input[type="url"],
-  textarea {
-    cursor: text !important;
+  input[type="tel"],
+  input[type="number"],
+  textarea,
+  [contenteditable="true"] {
+    cursor: text;
   }
 
-  /* Select elements should have default cursor */
+  /* Disabled elements get not-allowed cursor */
+  button:disabled,
+  input:disabled,
+  textarea:disabled,
+  select:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  /* Resizable elements */
+  textarea {
+    cursor: text;
+  }
+
+  /* File inputs */
+  input[type="file"] {
+    cursor: pointer;
+  }
+
+  /* Range inputs */
+  input[type="range"] {
+    cursor: pointer;
+  }
+
+  /* Select elements */
   select {
-    cursor: default !important;
+    cursor: pointer;
+  }
+
+  /* Default cursor for everything else */
+  div, span, p, img, svg, path, circle, rect, 
+  main, section, article, aside, header, footer, nav,
+  ul, ol, li, dl, dt, dd,
+  table, thead, tbody, tr, td, th,
+  form, fieldset, legend {
+    cursor: default;
   }
 }
 
