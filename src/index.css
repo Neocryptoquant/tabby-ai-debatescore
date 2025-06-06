@@ -102,32 +102,49 @@
     @apply font-outfit font-medium;
   }
 
-  /* Clickable elements get pointer cursor */
-  button:not(:disabled), 
-  a[href], 
-  [role="button"]:not([aria-disabled="true"]), 
-  [tabindex="0"]:not(input):not(textarea):not(select):not([aria-disabled="true"]),
-  .cursor-pointer,
-  summary,
-  label[for],
-  input[type="radio"],
-  input[type="checkbox"],
-  input[type="submit"],
-  input[type="button"],
-  input[type="reset"] {
+  /* Default cursor for all elements */
+  * {
+    cursor: default;
+  }
+
+  /* Clickable elements get pointer cursor ONLY on hover */
+  button:not(:disabled):hover, 
+  a[href]:hover, 
+  [role="button"]:not([aria-disabled="true"]):hover, 
+  [tabindex="0"]:not(input):not(textarea):not(select):not([aria-disabled="true"]):hover,
+  .cursor-pointer:hover,
+  summary:hover,
+  label[for]:hover,
+  input[type="radio"]:hover,
+  input[type="checkbox"]:hover,
+  input[type="submit"]:hover,
+  input[type="button"]:hover,
+  input[type="reset"]:hover,
+  input[type="file"]:hover,
+  input[type="range"]:hover,
+  select:hover {
     cursor: pointer;
   }
 
-  /* Text input elements get text cursor */
-  input[type="text"], 
-  input[type="email"], 
-  input[type="password"], 
-  input[type="search"], 
-  input[type="url"],
-  input[type="tel"],
-  input[type="number"],
-  textarea,
-  [contenteditable="true"] {
+  /* Text input elements get text cursor on focus/hover */
+  input[type="text"]:focus,
+  input[type="text"]:hover,
+  input[type="email"]:focus,
+  input[type="email"]:hover,
+  input[type="password"]:focus,
+  input[type="password"]:hover,
+  input[type="search"]:focus,
+  input[type="search"]:hover,
+  input[type="url"]:focus,
+  input[type="url"]:hover,
+  input[type="tel"]:focus,
+  input[type="tel"]:hover,
+  input[type="number"]:focus,
+  input[type="number"]:hover,
+  textarea:focus,
+  textarea:hover,
+  [contenteditable="true"]:focus,
+  [contenteditable="true"]:hover {
     cursor: text;
   }
 
@@ -138,35 +155,6 @@
   select:disabled,
   [aria-disabled="true"] {
     cursor: not-allowed;
-  }
-
-  /* Resizable elements */
-  textarea {
-    cursor: text;
-  }
-
-  /* File inputs */
-  input[type="file"] {
-    cursor: pointer;
-  }
-
-  /* Range inputs */
-  input[type="range"] {
-    cursor: pointer;
-  }
-
-  /* Select elements */
-  select {
-    cursor: pointer;
-  }
-
-  /* Default cursor for everything else */
-  div, span, p, img, svg, path, circle, rect, 
-  main, section, article, aside, header, footer, nav,
-  ul, ol, li, dl, dt, dd,
-  table, thead, tbody, tr, td, th,
-  form, fieldset, legend {
-    cursor: default;
   }
 }
 

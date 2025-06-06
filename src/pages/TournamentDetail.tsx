@@ -158,10 +158,15 @@ const TournamentDetail = () => {
     }
   };
 
-  // Create a wrapper function for generating draws for all rounds
+  // Fixed: Create a wrapper function that doesn't require parameters
   const handleGenerateAllDraws = async () => {
     if (rounds.length === 0) {
       toast.error('No rounds available to generate draws');
+      return;
+    }
+    
+    if (teams.length < 2) {
+      toast.error('Need at least 2 teams to generate draws');
       return;
     }
     
@@ -174,6 +179,27 @@ const TournamentDetail = () => {
     if (id) {
       navigate(`/tournaments/${id}/edit`);
     }
+  };
+
+  // Fixed: Add proper click handlers for the quick action buttons
+  const handleQuickActionTeams = () => {
+    console.log('Switching to teams tab');
+    setActiveTab("teams");
+  };
+
+  const handleQuickActionJudges = () => {
+    console.log('Switching to judges tab');
+    setActiveTab("judges");
+  };
+
+  const handleQuickActionRounds = () => {
+    console.log('Switching to rounds tab');
+    setActiveTab("rounds");
+  };
+
+  const handleQuickActionUpload = () => {
+    console.log('Toggling CSV upload');
+    setShowCSVUpload(!showCSVUpload);
   };
 
   if (isLoading || !tournament) {
@@ -279,7 +305,7 @@ const TournamentDetail = () => {
                   <h3 className="text-lg font-semibold">Quick Actions</h3>
                   <div className="space-y-3">
                     <Button
-                      onClick={() => setActiveTab("teams")}
+                      onClick={handleQuickActionTeams}
                       variant="outline"
                       className="w-full justify-start"
                     >
@@ -288,7 +314,7 @@ const TournamentDetail = () => {
                     </Button>
                     
                     <Button
-                      onClick={() => setActiveTab("judges")}
+                      onClick={handleQuickActionJudges}
                       variant="outline"
                       className="w-full justify-start"
                     >
@@ -297,7 +323,7 @@ const TournamentDetail = () => {
                     </Button>
                     
                     <Button
-                      onClick={() => setActiveTab("rounds")}
+                      onClick={handleQuickActionRounds}
                       variant="outline"
                       className="w-full justify-start"
                     >
@@ -306,7 +332,7 @@ const TournamentDetail = () => {
                     </Button>
                     
                     <Button
-                      onClick={() => setShowCSVUpload(!showCSVUpload)}
+                      onClick={handleQuickActionUpload}
                       variant="outline"
                       className="w-full justify-start"
                     >
