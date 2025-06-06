@@ -91,6 +91,7 @@
 @layer base {
   * {
     @apply border-border;
+    cursor: default; /* Set default cursor for all elements */
   }
 
   body {
@@ -99,6 +100,30 @@
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-outfit font-medium;
+  }
+
+  /* Only show pointer cursor on truly clickable elements */
+  button, 
+  a, 
+  [role="button"], 
+  [tabindex="0"]:not(input):not(textarea):not(select),
+  .cursor-pointer {
+    cursor: pointer !important;
+  }
+
+  /* Input elements should have text cursor */
+  input[type="text"], 
+  input[type="email"], 
+  input[type="password"], 
+  input[type="search"], 
+  input[type="url"],
+  textarea {
+    cursor: text !important;
+  }
+
+  /* Select elements should have default cursor */
+  select {
+    cursor: default !important;
   }
 }
 

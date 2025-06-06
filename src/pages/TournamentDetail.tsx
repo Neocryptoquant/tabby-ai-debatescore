@@ -158,6 +158,18 @@ const TournamentDetail = () => {
     }
   };
 
+  // Create a wrapper function for generating draws for all rounds
+  const handleGenerateAllDraws = async () => {
+    if (rounds.length === 0) {
+      toast.error('No rounds available to generate draws');
+      return;
+    }
+    
+    // Generate draws for the first available round
+    const firstRound = rounds[0];
+    await handleGenerateDraws(firstRound.id);
+  };
+
   const handleEditTournament = () => {
     if (id) {
       navigate(`/tournaments/${id}/edit`);
@@ -343,7 +355,7 @@ const TournamentDetail = () => {
           <TabsContent value="draws">
             <DrawsList 
               draws={draws}
-              onGenerateDraws={handleGenerateDraws}
+              onGenerateDraws={handleGenerateAllDraws}
               onRegenerateDraws={(roundNumber) => {
                 const round = rounds.find(r => r.round_number === roundNumber);
                 if (round) {
