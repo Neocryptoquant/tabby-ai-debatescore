@@ -30,7 +30,7 @@ const Rounds = () => {
     judges,
     isLoading,
     addRound,
-    generateDraws,
+    generateDrawsWithHistory,
     deleteRound
   } = useTournamentData(id);
 
@@ -59,7 +59,8 @@ const Rounds = () => {
 
   const handleGenerateDraws = async (roundId: string) => {
     try {
-      await generateDraws(roundId);
+      const rooms = Array.from({ length: Math.ceil(teams.length / 4) }, (_, i) => `Room ${i + 1}`);
+      await generateDrawsWithHistory(roundId, teams, rooms);
     } catch (error) {
       console.error('Error generating draws:', error);
     }

@@ -154,17 +154,15 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
 
   const updateDrawOrder = async (orderedDraws: EnhancedDraw[]) => {
     try {
-      const updates = orderedDraws.map((draw, index) => ({
-        id: draw.id,
-        position: index
-      }));
+      // Update each draw with new position information
+      const updates = orderedDraws.map((draw, index) => 
+        supabase
+          .from('draws')
+          .update({ room: `Room ${index + 1}` })
+          .eq('id', draw.id)
+      );
 
-      const { error } = await supabase
-        .from('draws')
-        .upsert(updates.map(update => ({ ...update })));
-
-      if (error) throw error;
-      
+      await Promise.all(updates);
       toast.success('Draw order updated');
     } catch (error) {
       console.error('Error updating draw order:', error);

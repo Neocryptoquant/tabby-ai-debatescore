@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,7 +52,7 @@ interface TournamentCardData {
 interface JudgeFormData {
   name: string;
   institution?: string;
-  experience_level: string;
+  experience_level: 'novice' | 'intermediate' | 'open' | 'pro';
 }
 
 interface EnhancedRoundFormData {
@@ -146,7 +147,7 @@ const TournamentDetail = () => {
       await addJudge({
         name: judgeData.name,
         institution: judgeData.institution || '',
-        experience_level: judgeData.experience_level as any
+        experience_level: judgeData.experience_level
       });
       toast.dismiss();
       toast.success('Judge added successfully!');

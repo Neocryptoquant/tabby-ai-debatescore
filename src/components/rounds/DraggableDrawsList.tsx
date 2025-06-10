@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import {
   DndContext,
@@ -20,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Trophy, Shuffle, Play, CheckCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Team, Draw } from '@/types/tournament';
+import { Team, Draw, Judge } from '@/types/tournament';
 import { useDrawGenerator } from '@/hooks/useDrawGenerator';
 import { SortableDraw } from './SortableDraw';
 import html2canvas from 'html2canvas';
@@ -29,6 +30,7 @@ interface DraggableDrawsListProps {
   tournamentId: string;
   roundId: string;
   teams: Team[];
+  judges: Judge[];
   rooms: string[];
   draws: Draw[];
   onStartRound: (roundId: string) => Promise<void>;
@@ -43,6 +45,7 @@ export function DraggableDrawsList({
   tournamentId,
   roundId,
   teams,
+  judges,
   rooms,
   draws: initialDraws,
   onStartRound,
@@ -67,6 +70,7 @@ export function DraggableDrawsList({
     tournamentId,
     roundId,
     teams,
+    judges,
     rooms
   });
 
