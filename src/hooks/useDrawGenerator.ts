@@ -114,9 +114,15 @@ export function useDrawGenerator({ tournamentId, roundId, teams, rooms }: UseDra
 
       // Update generation history with proper typing
       const newDraws: Draw[] = (data || []).map(draw => ({
-        ...draw,
-        tournament_id: tournamentId,
+        id: draw.id,
+        round_id: draw.round_id,
+        tournament_id: draw.tournament_id || tournamentId,
+        room: draw.room,
+        gov_team_id: draw.gov_team_id,
+        opp_team_id: draw.opp_team_id,
         status: draw.status as 'pending' | 'in_progress' | 'completed',
+        created_at: draw.created_at,
+        updated_at: draw.updated_at,
         gov_team: teams.find(t => t.id === draw.gov_team_id),
         opp_team: teams.find(t => t.id === draw.opp_team_id)
       }));

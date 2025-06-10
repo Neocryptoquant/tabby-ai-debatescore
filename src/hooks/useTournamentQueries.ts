@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -151,8 +152,8 @@ export const useTournamentQueries = (tournamentId?: string) => {
         institution: team.institution || undefined,
         speaker_1: team.speaker_1 || undefined,
         speaker_2: team.speaker_2 || undefined,
-        experience_level: team.experience_level || 'novice',
-        break_category: team.break_category || undefined,
+        experience_level: 'novice', // Default value since it's not in the database
+        break_category: undefined, // Default value since it's not in the database
         created_at: team.created_at,
         updated_at: team.updated_at
       }));
@@ -171,6 +172,8 @@ export const useTournamentQueries = (tournamentId?: string) => {
     if (!tournamentId) return;
     
     try {
+      console.log('Fetching draws for tournament:', tournamentId);
+      
       const { data: roundData, error: roundError } = await supabase
         .from('rounds')
         .select('id')
@@ -184,6 +187,7 @@ export const useTournamentQueries = (tournamentId?: string) => {
       const roundIds = roundData?.map(r => r.id) || [];
       
       if (roundIds.length === 0) {
+        console.log('No rounds found, setting empty draws');
         setDraws([]);
         return;
       }
@@ -201,27 +205,7 @@ export const useTournamentQueries = (tournamentId?: string) => {
           gov_score,
           opp_score,
           created_at,
-          updated_at,
-          gov_team:teams!draws_gov_team_id_fkey(
-            id,
-            name,
-            institution,
-            tournament_id,
-            speaker_1,
-            speaker_2,
-            experience_level,
-            break_category
-          ),
-          opp_team:teams!draws_opp_team_id_fkey(
-            id,
-            name,
-            institution,
-            tournament_id,
-            speaker_1,
-            speaker_2,
-            experience_level,
-            break_category
-          )
+          updated_at
         `)
         .in('round_id', roundIds)
         .order('room');
@@ -230,6 +214,21 @@ export const useTournamentQueries = (tournamentId?: string) => {
         console.error('Error fetching draws:', error);
         throw error;
       }
+
+      console.log('Raw draws data from database:', data);
+      
+      // Fetch teams separately to avoid join errors
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name, institution, tournament_id, speaker_1, speaker_2')
+        .eq('tournament_id', tournamentId);
+
+      if (teamsError) {
+        console.error('Error fetching teams for draws:', teamsError);
+        throw teamsError;
+      }
+
+      const teamsMap = new Map(teamsData?.map(team => [team.id, team]) || []);
       
       const typedDraws: Draw[] = (data || []).map(draw => ({
         id: draw.id,
@@ -241,10 +240,11 @@ export const useTournamentQueries = (tournamentId?: string) => {
         status: (draw.status as 'pending' | 'in_progress' | 'completed') || 'pending',
         created_at: draw.created_at,
         updated_at: draw.updated_at,
-        gov_team: draw.gov_team,
-        opp_team: draw.opp_team
+        gov_team: teamsMap.get(draw.gov_team_id),
+        opp_team: teamsMap.get(draw.opp_team_id)
       }));
       
+      console.log('Processed draws:', typedDraws);
       setDraws(typedDraws);
     } catch (error) {
       console.error('Error fetching draws:', error);

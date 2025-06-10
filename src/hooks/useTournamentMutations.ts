@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Round, Team } from '@/types/tournament';
@@ -91,8 +92,8 @@ export const useTournamentMutations = (
         institution: data.institution || undefined,
         speaker_1: data.speaker_1 || undefined,
         speaker_2: data.speaker_2 || undefined,
-        experience_level: data.experience_level || 'novice',
-        break_category: data.break_category || undefined,
+        experience_level: 'novice', // Default value since it's not in the database
+        break_category: undefined, // Default value since it's not in the database
         created_at: data.created_at,
         updated_at: data.updated_at
       };

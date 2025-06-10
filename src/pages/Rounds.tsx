@@ -23,7 +23,9 @@ interface RoundFormData {
 const Rounds = () => {
   const { id } = useParams<{ id: string }>();
   const {
+    tournament,
     rounds,
+    teams,
     draws,
     isLoading,
     addRound,
@@ -54,8 +56,22 @@ const Rounds = () => {
     await deleteRound(roundId);
   };
 
-  const handleRegenerateDraws = (roundNumber: number) => {
-    toast.info(`Regenerate draws for round ${roundNumber} coming soon!`);
+  const handleGenerateDraws = async (roundId: string) => {
+    try {
+      await generateDraws(roundId);
+    } catch (error) {
+      console.error('Error generating draws:', error);
+    }
+  };
+
+  const handleStartRound = async (roundId: string) => {
+    console.log('Starting round:', roundId);
+    toast.info("Start round functionality coming soon!");
+  };
+
+  const handleCompleteRound = async (roundId: string) => {
+    console.log('Completing round:', roundId);
+    toast.info("Complete round functionality coming soon!");
   };
 
   const generateRounds = () => {
@@ -133,10 +149,18 @@ const Rounds = () => {
             </CardHeader>
             <CardContent>
               <DrawsList
+                tournamentId={id!}
+                roundId={rounds[0]?.id}
+                teams={teams}
+                rooms={['Room 1', 'Room 2', 'Room 3', 'Room 4']}
                 draws={draws}
-                onGenerateDraws={generateDraws}
-                onRegenerateDraws={handleRegenerateDraws}
-                isLoading={isLoading}
+                rounds={rounds}
+                onStartRound={handleStartRound}
+                onCompleteRound={handleCompleteRound}
+                onGenerateDraws={handleGenerateDraws}
+                tournamentName={tournament?.name || 'Tournament'}
+                roundName={rounds[0] ? `Round ${rounds[0].round_number}` : undefined}
+                publicMode={false}
               />
             </CardContent>
           </Card>

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -54,6 +55,13 @@ interface JudgeFormData {
   experience_level: ExperienceLevel;
 }
 
+interface EnhancedRoundFormData {
+  round_number: number;
+  motion: string;
+  info_slide?: string;
+  start_time?: string;
+}
+
 const TournamentDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -68,7 +76,6 @@ const TournamentDetail = () => {
     addTeam, 
     addRound,
     addJudge,
-    updateJudge,
     deleteJudge,
     deleteTeam,
     deleteRound,
@@ -116,7 +123,7 @@ const TournamentDetail = () => {
     }
   };
 
-  const handleAddRound = async (roundData: Omit<Round, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>) => {
+  const handleAddRound = async (roundData: EnhancedRoundFormData) => {
     try {
       toast.loading('Creating round...');
       await addRound({
@@ -218,7 +225,12 @@ const TournamentDetail = () => {
       
       toast.dismiss();
       toast.success('Draws generated successfully!');
-      refetch();
+      
+      // Refetch draws to update the UI
+      setTimeout(() => {
+        refetch();
+      }, 1000);
+      
     } catch (error) {
       toast.dismiss();
       console.error('Error generating draws:', error);
@@ -288,14 +300,10 @@ const TournamentDetail = () => {
     if (!editJudge) return;
 
     try {
-      await updateJudge(editJudge.id, {
-        name: data.name,
-        institution: data.institution,
-        experience_level: data.experience_level
-      });
+      // For now, we'll just close the modal since updateJudge is not available
       setIsEditJudgeModalOpen(false);
       setEditJudge(null);
-      toast.success('Judge updated successfully!');
+      toast.info('Judge update functionality coming soon!');
     } catch (error) {
       console.error('Error updating judge:', error);
       toast.error('Failed to update judge');
@@ -305,11 +313,13 @@ const TournamentDetail = () => {
   const handleStartRound = async (roundId: string) => {
     // TODO: Implement start round functionality
     console.log('Starting round:', roundId);
+    toast.info('Start round functionality coming soon!');
   };
 
   const handleCompleteRound = async (roundId: string) => {
     // TODO: Implement complete round functionality
     console.log('Completing round:', roundId);
+    toast.info('Complete round functionality coming soon!');
   };
 
   if (isLoading || !tournament) {
@@ -507,7 +517,7 @@ const TournamentDetail = () => {
                     defaultValues={{
                       name: editJudge.name,
                       institution: editJudge.institution,
-                      experience_level: editJudge.experience_level
+                      experience_level: editJudge.experience_level as ExperienceLevel
                     }}
                     isEditMode
                   />
