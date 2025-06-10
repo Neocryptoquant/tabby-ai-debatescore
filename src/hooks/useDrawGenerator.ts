@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { DrawGenerator } from '@/services/drawGenerator';
 import { Team, Draw } from '@/types/tournament';
@@ -19,6 +20,8 @@ export function useDrawGenerator({ tournamentId, roundId, teams, rooms }: UseDra
     console.log('Generating draws with teams:', teams);
     console.log('Number of teams:', teams?.length);
     console.log('Teams array:', teams);
+    console.log('Round ID:', roundId);
+    console.log('Tournament ID:', tournamentId);
 
     if (!teams || !Array.isArray(teams)) {
       console.error('Teams is not an array:', teams);
@@ -32,9 +35,21 @@ export function useDrawGenerator({ tournamentId, roundId, teams, rooms }: UseDra
       return;
     }
 
+    if (teams.length < 2) {
+      console.error('Not enough teams for BP format');
+      toast.error('Need at least 2 teams for draw generation');
+      return;
+    }
+
     if (!rooms || !Array.isArray(rooms) || rooms.length === 0) {
       console.error('No rooms available:', rooms);
       toast.error('No rooms available for draw generation');
+      return;
+    }
+
+    if (!roundId) {
+      console.error('No round ID provided');
+      toast.error('Round ID is required for draw generation');
       return;
     }
 
@@ -47,31 +62,55 @@ export function useDrawGenerator({ tournamentId, roundId, teams, rooms }: UseDra
         .eq('id', roundId)
         .single();
 
-      if (roundError) throw roundError;
+      if (roundError) {
+        console.error('Error fetching round:', roundError);
+        throw roundError;
+      }
       if (!roundData) throw new Error('Round not found');
+
+      console.log('Round data:', roundData);
+
+      // Delete existing draws for this round first
+      const { error: deleteError } = await supabase
+        .from('draws')
+        .delete()
+        .eq('round_id', roundId);
+
+      if (deleteError) {
+        console.error('Error deleting existing draws:', deleteError);
+        throw deleteError;
+      }
 
       // Create draw generator instance
       const generator = new DrawGenerator(teams, roundData.round_number, rooms);
 
       // Generate draws
       const draws = generator.generateDraws();
+      console.log('Generated draws:', draws);
 
       // Save draws to database
+      const drawsToInsert = draws.map(draw => ({
+        round_id: roundId,
+        tournament_id: tournamentId,
+        room: draw.room,
+        gov_team_id: draw.teams.OG.id,
+        opp_team_id: draw.teams.OO.id,
+        status: 'pending' as const
+      }));
+
+      console.log('Inserting draws:', drawsToInsert);
+
       const { data, error } = await supabase
         .from('draws')
-        .insert(
-          draws.map(draw => ({
-            round_id: roundId,
-            tournament_id: tournamentId,
-            room: draw.room,
-            gov_team_id: draw.teams.OG.id,
-            opp_team_id: draw.teams.OO.id,
-            status: 'pending' as const
-          }))
-        )
+        .insert(drawsToInsert)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting draws:', error);
+        throw error;
+      }
+
+      console.log('Successfully inserted draws:', data);
 
       // Update generation history with proper typing
       const newDraws: Draw[] = (data || []).map(draw => ({
@@ -117,4 +156,4 @@ export function useDrawGenerator({ tournamentId, roundId, teams, rooms }: UseDra
     isGenerating,
     generationHistory
   };
-} 
+}

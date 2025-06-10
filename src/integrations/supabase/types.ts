@@ -71,6 +71,7 @@ export type Database = {
           room: string
           round_id: string
           status: string | null
+          tournament_id: string | null
           updated_at: string
         }
         Insert: {
@@ -86,6 +87,7 @@ export type Database = {
           room: string
           round_id: string
           status?: string | null
+          tournament_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -101,6 +103,7 @@ export type Database = {
           room?: string
           round_id?: string
           status?: string | null
+          tournament_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -137,6 +140,13 @@ export type Database = {
             columns: ["round_id"]
             isOneToOne: false
             referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draws_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
             referencedColumns: ["id"]
           },
         ]

@@ -183,6 +183,7 @@ const TournamentDetail = () => {
   };
 
   const handleGenerateDraws = async (roundId: string) => {
+    console.log('Generating draws for round:', roundId);
     console.log('Current teams:', teams);
     console.log('Number of teams:', teams?.length);
 
@@ -212,14 +213,9 @@ const TournamentDetail = () => {
       const numRooms = Math.ceil(teams.length / 2);
       const rooms = Array.from({ length: numRooms }, (_, i) => `Room ${i + 1}`);
 
-      // Use the draw generator hook with the correct arguments
-      const { generateDraws } = useDrawGenerator({
-        tournamentId: id!,
-        roundId,
-        teams,
-        rooms,
-      });
-      await generateDraws();
+      // Use the enhanced draw generation
+      await generateDrawsWithHistory(roundId, teams, rooms);
+      
       toast.dismiss();
       toast.success('Draws generated successfully!');
       refetch();
@@ -338,14 +334,14 @@ const TournamentDetail = () => {
     status: (tournament.status as 'active' | 'upcoming' | 'completed') || "upcoming",
   };
 
-  const quickStats: TournamentCardData[] = [
+  const quickStats = [
     {
       title: "Teams",
       value: teams?.length || 0,
       description: "Total registered teams"
     },
     {
-      title: "Judges",
+      title: "Judges", 
       value: judges?.length || 0,
       description: "Total registered judges"
     },
@@ -537,21 +533,20 @@ const TournamentDetail = () => {
           </TabsContent>
 
           <TabsContent value="draws">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <LoadingSpinner size="lg" />
-              </div>
-            ) : (
-              <DrawsList
-                tournamentId={id!}
-                roundId={rounds[0]?.id || ''}
-                teams={teams}
-                rooms={['Room 1', 'Room 2', 'Room 3', 'Room 4']} // TODO: Make this dynamic
-                draws={draws}
-                onStartRound={handleStartRound}
-                onCompleteRound={handleCompleteRound}
-              />
-            )}
+            <DrawsList
+              tournamentId={id!}
+              roundId={rounds[0]?.id}
+              teams={teams}
+              rooms={['Room 1', 'Room 2', 'Room 3', 'Room 4']} // TODO: Make this dynamic
+              draws={draws}
+              rounds={rounds}
+              onStartRound={handleStartRound}
+              onCompleteRound={handleCompleteRound}
+              onGenerateDraws={handleGenerateDraws}
+              tournamentName={tournament.name}
+              roundName={rounds[0] ? `Round ${rounds[0].round_number}` : undefined}
+              publicMode={false}
+            />
           </TabsContent>
 
           <TabsContent value="analytics">
