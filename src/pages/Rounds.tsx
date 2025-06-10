@@ -27,6 +27,7 @@ const Rounds = () => {
     rounds,
     teams,
     draws,
+    judges,
     isLoading,
     addRound,
     generateDraws,
@@ -152,6 +153,7 @@ const Rounds = () => {
                 tournamentId={id!}
                 roundId={rounds[0]?.id}
                 teams={teams}
+                judges={judges}
                 rooms={['Room 1', 'Room 2', 'Room 3', 'Room 4']}
                 draws={draws}
                 rounds={rounds}

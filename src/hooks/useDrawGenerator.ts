@@ -1,25 +1,26 @@
 
 import { useState, useCallback } from 'react';
-import { DrawGenerator } from '@/services/drawGenerator';
-import { Team, Draw } from '@/types/tournament';
+import { Team, Draw, Judge } from '@/types/tournament';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { EnhancedDrawGenerator } from '@/services/enhancedDrawGenerator';
 
 interface UseDrawGeneratorProps {
   tournamentId: string;
   roundId: string;
   teams: Team[];
+  judges: Judge[];
   rooms: string[];
 }
 
-export function useDrawGenerator({ tournamentId, roundId, teams, rooms }: UseDrawGeneratorProps) {
+export function useDrawGenerator({ tournamentId, roundId, teams, judges, rooms }: UseDrawGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationHistory, setGenerationHistory] = useState<Draw[]>([]);
 
-  const generateDraws = useCallback(async (method: 'power_pairing' | 'random' = 'power_pairing') => {
+  const generateDraws = useCallback(async (method: 'random' | 'power_pairing' | 'swiss' | 'balanced' = 'random') => {
     console.log('Generating draws with teams:', teams);
     console.log('Number of teams:', teams?.length);
-    console.log('Teams array:', teams);
+    console.log('Number of judges:', judges?.length);
     console.log('Round ID:', roundId);
     console.log('Tournament ID:', tournamentId);
 
@@ -35,9 +36,9 @@ export function useDrawGenerator({ tournamentId, roundId, teams, rooms }: UseDra
       return;
     }
 
-    if (teams.length < 2) {
+    if (teams.length < 4) {
       console.error('Not enough teams for BP format');
-      toast.error('Need at least 2 teams for draw generation');
+      toast.error('Need at least 4 teams for British Parliamentary format');
       return;
     }
 
@@ -81,22 +82,19 @@ export function useDrawGenerator({ tournamentId, roundId, teams, rooms }: UseDra
         throw deleteError;
       }
 
-      // Create draw generator instance
-      const generator = new DrawGenerator(teams, roundData.round_number, rooms);
+      // Create enhanced draw generator instance
+      const generator = new EnhancedDrawGenerator(teams, judges, rooms, {
+        method,
+        avoidInstitutionClashes: true,
+        balanceExperience: true
+      });
 
-      // Generate draws
-      const draws = generator.generateDraws();
-      console.log('Generated draws:', draws);
+      // Generate draw rooms
+      const drawRooms = generator.generateDraws();
+      console.log('Generated draw rooms:', drawRooms);
 
-      // Save draws to database
-      const drawsToInsert = draws.map(draw => ({
-        round_id: roundId,
-        tournament_id: tournamentId,
-        room: draw.room,
-        gov_team_id: draw.teams.OG.id,
-        opp_team_id: draw.teams.OO.id,
-        status: 'pending' as const
-      }));
+      // Convert to database format
+      const drawsToInsert = generator.convertToDraws(drawRooms, roundId, tournamentId);
 
       console.log('Inserting draws:', drawsToInsert);
 
@@ -120,15 +118,14 @@ export function useDrawGenerator({ tournamentId, roundId, teams, rooms }: UseDra
         room: draw.room,
         gov_team_id: draw.gov_team_id,
         opp_team_id: draw.opp_team_id,
+        judge_id: draw.judge_id,
         status: draw.status as 'pending' | 'in_progress' | 'completed',
         created_at: draw.created_at,
-        updated_at: draw.updated_at,
-        gov_team: teams.find(t => t.id === draw.gov_team_id),
-        opp_team: teams.find(t => t.id === draw.opp_team_id)
+        updated_at: draw.updated_at
       }));
       setGenerationHistory(prev => [...prev, ...newDraws]);
 
-      toast.success('Draws generated successfully!');
+      toast.success(`Successfully generated ${drawRooms.length} draws!`);
       return newDraws;
     } catch (error) {
       console.error('Error generating draws:', error);
@@ -137,24 +134,12 @@ export function useDrawGenerator({ tournamentId, roundId, teams, rooms }: UseDra
     } finally {
       setIsGenerating(false);
     }
-  }, [tournamentId, roundId, teams, rooms]);
+  }, [tournamentId, roundId, teams, judges, rooms]);
 
   const regenerateDraws = useCallback(async () => {
-    // Delete existing draws
-    const { error: deleteError } = await supabase
-      .from('draws')
-      .delete()
-      .eq('round_id', roundId);
-
-    if (deleteError) {
-      console.error('Error deleting existing draws:', deleteError);
-      toast.error('Failed to delete existing draws');
-      return;
-    }
-
-    // Generate new draws
+    // Generate new draws with different randomization
     return generateDraws();
-  }, [roundId, generateDraws]);
+  }, [generateDraws]);
 
   return {
     generateDraws,

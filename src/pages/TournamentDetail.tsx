@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,7 +33,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tournament, Team, Round, Draw, Judge, ExperienceLevel } from "@/types/tournament";
+import { Tournament, Team, Round, Draw, Judge } from "@/types/tournament";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useDrawGenerator } from "@/hooks/useDrawGenerator";
 import { TeamsList } from "@/components/teams/TeamsList";
@@ -52,7 +51,7 @@ interface TournamentCardData {
 interface JudgeFormData {
   name: string;
   institution?: string;
-  experience_level: ExperienceLevel;
+  experience_level: string;
 }
 
 interface EnhancedRoundFormData {
@@ -108,8 +107,7 @@ const TournamentDetail = () => {
           name: team.name,
           institution: team.institution || '',
           speaker_1: team.speaker_1 || '',
-          speaker_2: team.speaker_2 || '',
-          experience_level: team.experience_level || 'novice'
+          speaker_2: team.speaker_2 || ''
         });
       }
       toast.dismiss();
@@ -148,7 +146,7 @@ const TournamentDetail = () => {
       await addJudge({
         name: judgeData.name,
         institution: judgeData.institution || '',
-        experience_level: judgeData.experience_level || 'novice'
+        experience_level: judgeData.experience_level as any
       });
       toast.dismiss();
       toast.success('Judge added successfully!');
@@ -217,7 +215,7 @@ const TournamentDetail = () => {
       }
 
       // Generate rooms based on number of teams
-      const numRooms = Math.ceil(teams.length / 2);
+      const numRooms = Math.ceil(teams.length / 4);
       const rooms = Array.from({ length: numRooms }, (_, i) => `Room ${i + 1}`);
 
       // Use the enhanced draw generation
@@ -517,7 +515,7 @@ const TournamentDetail = () => {
                     defaultValues={{
                       name: editJudge.name,
                       institution: editJudge.institution,
-                      experience_level: editJudge.experience_level as ExperienceLevel
+                      experience_level: editJudge.experience_level as any
                     }}
                     isEditMode
                   />
@@ -531,7 +529,6 @@ const TournamentDetail = () => {
               <EnhancedRoundForm 
                 onSave={handleAddRound} 
                 isLoading={isLoading}
-                existingRounds={rounds.map(r => r.round_number)}
               />
             )}
             <RoundsList 
@@ -547,7 +544,8 @@ const TournamentDetail = () => {
               tournamentId={id!}
               roundId={rounds[0]?.id}
               teams={teams}
-              rooms={['Room 1', 'Room 2', 'Room 3', 'Room 4']} // TODO: Make this dynamic
+              judges={judges}
+              rooms={['Room 1', 'Room 2', 'Room 3', 'Room 4']}
               draws={draws}
               rounds={rounds}
               onStartRound={handleStartRound}
