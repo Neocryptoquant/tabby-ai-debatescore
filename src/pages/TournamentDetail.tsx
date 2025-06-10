@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,8 +28,31 @@ import {
   Trophy,
   UserPlus,
   PlusCircle,
-  Gavel
+  Gavel,
+  Plus,
+  RefreshCw
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tournament, Team, Round, Draw, Judge, ExperienceLevel } from "@/types/tournament";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useDrawGenerator } from "@/hooks/useDrawGenerator";
+import { TeamsList } from "@/components/teams/TeamsList";
+
+interface TournamentCardData {
+  id: string;
+  name: string;
+  format: string;
+  date: string;
+  teamCount: number;
+  location: string;
+  status: 'active' | 'upcoming' | 'completed';
+}
+
+interface JudgeFormData {
+  name: string;
+  institution?: string;
+  experience_level: ExperienceLevel;
+}
 
 const TournamentDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +68,7 @@ const TournamentDetail = () => {
     addTeam, 
     addRound,
     addJudge,
+    updateJudge,
     deleteJudge,
     deleteTeam,
     deleteRound,
@@ -58,8 +81,14 @@ const TournamentDetail = () => {
 
   const [activeTab, setActiveTab] = useState("overview");
   const [showCSVUpload, setShowCSVUpload] = useState(false);
+  const [editJudge, setEditJudge] = useState<Judge | null>(null);
+  const [isEditJudgeModalOpen, setIsEditJudgeModalOpen] = useState(false);
+  const [isGeneratingDraws, setIsGeneratingDraws] = useState(false);
+  const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
+  const [isAddJudgeOpen, setIsAddJudgeOpen] = useState(false);
+  const [isAddRoundOpen, setIsAddRoundOpen] = useState(false);
 
-  const handleCSVUpload = async (uploadedTeams: any[]) => {
+  const handleCSVUpload = async (uploadedTeams: Omit<Team, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>[]) => {
     if (!uploadedTeams || uploadedTeams.length === 0) {
       toast.error('No teams to upload');
       return;
@@ -72,7 +101,8 @@ const TournamentDetail = () => {
           name: team.name,
           institution: team.institution || '',
           speaker_1: team.speaker_1 || '',
-          speaker_2: team.speaker_2 || ''
+          speaker_2: team.speaker_2 || '',
+          experience_level: team.experience_level || 'novice'
         });
       }
       toast.dismiss();
@@ -86,7 +116,7 @@ const TournamentDetail = () => {
     }
   };
 
-  const handleAddRound = async (roundData: any) => {
+  const handleAddRound = async (roundData: Omit<Round, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>) => {
     try {
       toast.loading('Creating round...');
       await addRound({
@@ -105,7 +135,7 @@ const TournamentDetail = () => {
     }
   };
 
-  const handleAddJudge = async (judgeData: any) => {
+  const handleAddJudge = async (judgeData: JudgeFormData) => {
     try {
       toast.loading('Adding judge...');
       await addJudge({
@@ -125,40 +155,83 @@ const TournamentDetail = () => {
   const handleDeleteTeam = async (teamId: string) => {
     try {
       await deleteTeam(teamId);
+      toast.success('Team deleted successfully');
     } catch (error) {
       console.error('Error deleting team:', error);
+      toast.error('Failed to delete team');
     }
   };
 
   const handleDeleteJudge = async (judgeId: string) => {
     try {
       await deleteJudge(judgeId);
+      toast.success('Judge deleted successfully');
     } catch (error) {
       console.error('Error deleting judge:', error);
+      toast.error('Failed to delete judge');
     }
   };
 
   const handleDeleteRound = async (roundId: string) => {
     try {
       await deleteRound(roundId);
+      toast.success('Round deleted successfully');
     } catch (error) {
       console.error('Error deleting round:', error);
+      toast.error('Failed to delete round');
     }
   };
 
   const handleGenerateDraws = async (roundId: string) => {
+    console.log('Current teams:', teams);
+    console.log('Number of teams:', teams?.length);
+
+    if (!teams || !Array.isArray(teams)) {
+      console.error('Teams is not an array:', teams);
+      toast.error('Invalid teams data');
+      return;
+    }
+
     if (teams.length < 2) {
+      console.error('Not enough teams:', teams.length);
       toast.error('Need at least 2 teams to generate draws');
       return;
     }
+
     try {
-      await generateDrawsWithHistory(roundId, 'power_pairing');
+      setIsGeneratingDraws(true);
+      toast.loading('Generating draws...');
+
+      // Get the round data
+      const round = rounds.find(r => r.id === roundId);
+      if (!round) {
+        throw new Error('Round not found');
+      }
+
+      // Generate rooms based on number of teams
+      const numRooms = Math.ceil(teams.length / 2);
+      const rooms = Array.from({ length: numRooms }, (_, i) => `Room ${i + 1}`);
+
+      // Use the draw generator hook with the correct arguments
+      const { generateDraws } = useDrawGenerator({
+        tournamentId: id!,
+        roundId,
+        teams,
+        rooms,
+      });
+      await generateDraws();
+      toast.dismiss();
+      toast.success('Draws generated successfully!');
+      refetch();
     } catch (error) {
+      toast.dismiss();
       console.error('Error generating draws:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to generate draws');
+    } finally {
+      setIsGeneratingDraws(false);
     }
   };
 
-  // Fixed: Create a wrapper function that doesn't require parameters
   const handleGenerateAllDraws = async () => {
     if (rounds.length === 0) {
       toast.error('No rounds available to generate draws');
@@ -169,10 +242,23 @@ const TournamentDetail = () => {
       toast.error('Need at least 2 teams to generate draws');
       return;
     }
+
+    if (judges.length === 0) {
+      toast.error('Need at least 1 judge to generate draws');
+      return;
+    }
     
-    // Generate draws for the first available round
-    const firstRound = rounds[0];
-    await handleGenerateDraws(firstRound.id);
+    setIsGeneratingDraws(true);
+    try {
+      // Generate draws for the first available round
+      const firstRound = rounds[0];
+      await handleGenerateDraws(firstRound.id);
+    } catch (error) {
+      console.error('Error generating all draws:', error);
+      toast.error('Failed to generate draws');
+    } finally {
+      setIsGeneratingDraws(false);
+    }
   };
 
   const handleEditTournament = () => {
@@ -181,25 +267,53 @@ const TournamentDetail = () => {
     }
   };
 
-  // Fixed: Add proper click handlers for the quick action buttons
   const handleQuickActionTeams = () => {
-    console.log('Switching to teams tab');
     setActiveTab("teams");
   };
 
   const handleQuickActionJudges = () => {
-    console.log('Switching to judges tab');
     setActiveTab("judges");
   };
 
   const handleQuickActionRounds = () => {
-    console.log('Switching to rounds tab');
     setActiveTab("rounds");
   };
 
   const handleQuickActionUpload = () => {
-    console.log('Toggling CSV upload');
     setShowCSVUpload(!showCSVUpload);
+  };
+
+  const handleEditJudge = (judge: Judge) => {
+    setEditJudge(judge);
+    setIsEditJudgeModalOpen(true);
+  };
+
+  const handleUpdateJudge = async (data: JudgeFormData) => {
+    if (!editJudge) return;
+
+    try {
+      await updateJudge(editJudge.id, {
+        name: data.name,
+        institution: data.institution,
+        experience_level: data.experience_level
+      });
+      setIsEditJudgeModalOpen(false);
+      setEditJudge(null);
+      toast.success('Judge updated successfully!');
+    } catch (error) {
+      console.error('Error updating judge:', error);
+      toast.error('Failed to update judge');
+    }
+  };
+
+  const handleStartRound = async (roundId: string) => {
+    // TODO: Implement start round functionality
+    console.log('Starting round:', roundId);
+  };
+
+  const handleCompleteRound = async (roundId: string) => {
+    // TODO: Implement complete round functionality
+    console.log('Completing round:', roundId);
   };
 
   if (isLoading || !tournament) {
@@ -214,15 +328,33 @@ const TournamentDetail = () => {
 
   const canEdit = canEditTournament(tournament.created_by);
 
-  const tournamentCardData = {
+  const tournamentCardData: TournamentCardData = {
     id: tournament.id,
     name: tournament.name,
     format: tournament.format?.toUpperCase() || "TBD",
     date: tournament.start_date ? new Date(tournament.start_date).toLocaleDateString() : "TBD",
     teamCount: teams.length,
     location: tournament.location || "TBD",
-    status: (tournament.status as "active" | "upcoming" | "completed") || "upcoming",
+    status: (tournament.status as 'active' | 'upcoming' | 'completed') || "upcoming",
   };
+
+  const quickStats: TournamentCardData[] = [
+    {
+      title: "Teams",
+      value: teams?.length || 0,
+      description: "Total registered teams"
+    },
+    {
+      title: "Judges",
+      value: judges?.length || 0,
+      description: "Total registered judges"
+    },
+    {
+      title: "Rounds",
+      value: rounds?.length || 0,
+      description: "Total rounds"
+    }
+  ];
 
   return (
     <MainLayout>
@@ -281,22 +413,15 @@ const TournamentDetail = () => {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Quick Stats</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <p className="text-sm text-blue-600">Teams Registered</p>
-                    <p className="text-2xl font-bold text-blue-900">{teams.length}</p>
-                  </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <p className="text-sm text-green-600">Rounds Created</p>
-                    <p className="text-2xl font-bold text-green-900">{rounds.length}</p>
-                  </div>
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <p className="text-sm text-purple-600">Draws Generated</p>
-                    <p className="text-2xl font-bold text-purple-900">{draws.length}</p>
-                  </div>
-                  <div className="bg-orange-50 p-4 rounded-lg">
-                    <p className="text-sm text-orange-600">Judges Added</p>
-                    <p className="text-2xl font-bold text-orange-900">{judges.length}</p>
-                  </div>
+                  {quickStats.map((stat, index) => (
+                    <div key={index} className="bg-blue-50 p-4 rounded-lg">
+                      <p className="text-sm text-blue-600">{stat.title}</p>
+                      <p className="text-2xl font-bold text-blue-900">{stat.value}</p>
+                      {stat.description && (
+                        <p className="text-sm text-gray-500 mt-1">{stat.description}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -352,7 +477,16 @@ const TournamentDetail = () => {
           </TabsContent>
 
           <TabsContent value="teams">
-            <TeamsTabContainer tournamentId={id!} />
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => setIsAddTeamOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Team
+              </Button>
+            </div>
+            <TeamsList
+              teams={teams}
+              onDelete={deleteTeam}
+            />
           </TabsContent>
 
           <TabsContent value="judges" className="space-y-6">
@@ -362,13 +496,37 @@ const TournamentDetail = () => {
             <JudgesList
               judges={judges}
               onDelete={handleDeleteJudge}
+              onEdit={handleEditJudge}
               isLoading={isLoading}
             />
+            <Dialog open={isEditJudgeModalOpen} onOpenChange={setIsEditJudgeModalOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Judge</DialogTitle>
+                </DialogHeader>
+                {editJudge && (
+                  <JudgeForm
+                    onSave={handleUpdateJudge}
+                    isLoading={isLoading}
+                    defaultValues={{
+                      name: editJudge.name,
+                      institution: editJudge.institution,
+                      experience_level: editJudge.experience_level
+                    }}
+                    isEditMode
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="rounds" className="space-y-6">
             {canEdit && (
-              <EnhancedRoundForm onSave={handleAddRound} isLoading={isLoading} />
+              <EnhancedRoundForm 
+                onSave={handleAddRound} 
+                isLoading={isLoading}
+                existingRounds={rounds.map(r => r.round_number)}
+              />
             )}
             <RoundsList 
               rounds={rounds}
@@ -379,17 +537,21 @@ const TournamentDetail = () => {
           </TabsContent>
 
           <TabsContent value="draws">
-            <DrawsList 
-              draws={draws}
-              onGenerateDraws={handleGenerateAllDraws}
-              onRegenerateDraws={(roundNumber) => {
-                const round = rounds.find(r => r.round_number === roundNumber);
-                if (round) {
-                  handleGenerateDraws(round.id);
-                }
-              }}
-              isLoading={isLoading || isGenerating}
-            />
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : (
+              <DrawsList
+                tournamentId={id!}
+                roundId={rounds[0]?.id || ''}
+                teams={teams}
+                rooms={['Room 1', 'Room 2', 'Room 3', 'Room 4']} // TODO: Make this dynamic
+                draws={draws}
+                onStartRound={handleStartRound}
+                onCompleteRound={handleCompleteRound}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="analytics">

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Save, Users } from "lucide-react";
 import { OperationFeedback } from "@/components/feedback/OperationFeedback";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import React from "react";
 
 interface TeamFormData {
   name: string;
@@ -21,13 +21,15 @@ interface TeamFormData {
 interface TeamFormProps {
   onSave: (data: TeamFormData) => Promise<void>;
   isLoading?: boolean;
+  defaultValues?: Partial<TeamFormData>;
+  isEditMode?: boolean;
 }
 
 /**
  * Form component for adding new teams to tournaments
  * Includes validation, loading states, and success/error feedback
  */
-export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
+export const TeamForm = ({ onSave, isLoading = false, defaultValues = {}, isEditMode = false }: TeamFormProps) => {
   const [operationStatus, setOperationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   
   const {
@@ -35,22 +37,30 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<TeamFormData>();
+    setValue
+  } = useForm<TeamFormData>({
+    defaultValues: defaultValues as TeamFormData
+  });
+
+  // Set default values when editing
+  // (for react-hook-form v7+, this is handled by defaultValues, but we ensure it updates on prop change)
+  React.useEffect(() => {
+    if (isEditMode && defaultValues) {
+      Object.entries(defaultValues).forEach(([key, value]) => {
+        setValue(key as keyof TeamFormData, value as any);
+      });
+    }
+  }, [defaultValues, isEditMode, setValue]);
 
   const onSubmit = async (data: TeamFormData) => {
-    console.log('Creating new team:', data);
     setOperationStatus('loading');
-    
     try {
       await onSave(data);
       setOperationStatus('success');
-      reset();
-      
-      // Reset status after showing success
+      if (!isEditMode) reset();
       setTimeout(() => setOperationStatus('idle'), 3000);
     } catch (error) {
       setOperationStatus('error');
-      // Reset status after showing error
       setTimeout(() => setOperationStatus('idle'), 4000);
     }
   };
@@ -60,7 +70,7 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Add New Team
+          {isEditMode ? 'Edit Team' : 'Add New Team'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -68,9 +78,9 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
           {/* Operation feedback */}
           <OperationFeedback
             status={operationStatus}
-            successMessage="Team added successfully! ✨"
-            errorMessage="Failed to add team. Please try again."
-            loadingMessage="Adding team to tournament..."
+            successMessage={isEditMode ? 'Team updated successfully! ✨' : 'Team added successfully! ✨'}
+            errorMessage={isEditMode ? 'Failed to update team. Please try again.' : 'Failed to add team. Please try again.'}
+            loadingMessage={isEditMode ? 'Updating team...' : 'Adding team to tournament...'}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -159,11 +169,11 @@ export const TeamForm = ({ onSave, isLoading = false }: TeamFormProps) => {
             className="w-full bg-tabby-secondary hover:bg-tabby-secondary/90"
           >
             {isLoading || operationStatus === 'loading' ? (
-              <LoadingSpinner size="sm" text="Adding Team..." />
+              <LoadingSpinner size="sm" text={isEditMode ? 'Updating Team...' : 'Adding Team...'} />
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Add Team
+                {isEditMode ? 'Update Team' : 'Add Team'}
               </>
             )}
           </Button>

@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Calendar, Users, Globe, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,8 +30,11 @@ export function TournamentCard({
   className
 }: TournamentCardProps) {
   return (
-    <div className={cn("tabby-card group cursor-pointer", className)}>
-      <div className="flex justify-between items-start">
+    <div className={cn("tabby-card", className)}>
+      <Link 
+        to={`/tournaments/${id}`} 
+        className="flex justify-between items-start hover:no-underline"
+      >
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className={cn("tabby-status-circle", statusColors[status])} />
@@ -42,7 +44,7 @@ export function TournamentCard({
           <div className="tabby-badge-primary mt-2">{format}</div>
         </div>
         <ChevronRight className="text-gray-400 h-5 w-5 group-hover:text-tabby-secondary group-hover:translate-x-1 transition-all" />
-      </div>
+      </Link>
       
       <div className="mt-6 space-y-3">
         <div className="flex items-center text-sm text-gray-500">
@@ -58,10 +60,6 @@ export function TournamentCard({
           <span>{location}</span>
         </div>
       </div>
-      
-      <Link to={`/tournaments/${id}`} className="absolute inset-0">
-        <span className="sr-only">View tournament details</span>
-      </Link>
     </div>
   );
 }

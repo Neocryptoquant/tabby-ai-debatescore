@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback } from 'react';
 import { useTournamentQueries } from './useTournamentQueries';
 import { useTournamentMutations } from './useTournamentMutations';
@@ -25,6 +24,7 @@ export const useTournamentData = (tournamentId?: string) => {
   const {
     addRound: addBasicRound,
     addTeam,
+    updateTeam,
     deleteRound: deleteBasicRound,
     deleteTeam
   } = useTournamentMutations(tournamentId, setRounds, setTeams, fetchDraws);
@@ -85,6 +85,11 @@ export const useTournamentData = (tournamentId?: string) => {
     }
   }, [tournamentId]);
 
+  // Log teams whenever they change
+  useEffect(() => {
+    console.log('Teams updated:', teams);
+  }, [teams]);
+
   return {
     // Basic data
     tournament,
@@ -96,6 +101,7 @@ export const useTournamentData = (tournamentId?: string) => {
     
     // Basic operations
     addTeam,
+    updateTeam,
     deleteTeam,
     
     // Enhanced operations

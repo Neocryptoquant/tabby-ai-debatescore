@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +14,11 @@ interface Judge {
 interface JudgesListProps {
   judges: Judge[];
   onDelete: (judgeId: string) => Promise<void>;
+  onEdit?: (judge: Judge) => void;
   isLoading?: boolean;
 }
 
-export const JudgesList = ({ judges, onDelete, isLoading = false }: JudgesListProps) => {
+export const JudgesList = ({ judges, onDelete, onEdit, isLoading = false }: JudgesListProps) => {
   const getExperienceColor = (level?: string) => {
     switch (level) {
       case 'novice': return 'bg-blue-100 text-blue-800';
@@ -74,6 +74,15 @@ export const JudgesList = ({ judges, onDelete, isLoading = false }: JudgesListPr
                   <Badge className={getExperienceColor(judge.experience_level)}>
                     {judge.experience_level}
                   </Badge>
+                )}
+                {onEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(judge)}
+                  >
+                    Edit
+                  </Button>
                 )}
                 <Button
                   variant="outline"

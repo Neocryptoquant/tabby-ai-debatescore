@@ -1,5 +1,4 @@
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tournament, Round, Team, Draw } from '@/types/tournament';
@@ -14,12 +13,42 @@ export const useTournamentQueries = (tournamentId?: string) => {
   const [draws, setDraws] = useState<Draw[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Set up real-time subscription for teams
+  useEffect(() => {
+    if (!tournamentId) return;
+
+    console.log('Setting up teams subscription for tournament:', tournamentId);
+    const teamsSubscription = supabase
+      .channel('teams-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'teams',
+          filter: `tournament_id=eq.${tournamentId}`
+        },
+        (payload) => {
+          console.log('Teams changed event received:', payload);
+          console.log('Current teams state:', teams);
+          fetchTeams();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up teams subscription');
+      teamsSubscription.unsubscribe();
+    };
+  }, [tournamentId]);
+
   // Memoize fetch functions to prevent infinite loops
   const fetchTournament = useCallback(async () => {
     if (!tournamentId) return;
     
     setIsLoading(true);
     try {
+      console.log('Fetching tournament:', tournamentId);
       const { data, error } = await supabase
         .from('tournaments')
         .select('*')
@@ -31,6 +60,7 @@ export const useTournamentQueries = (tournamentId?: string) => {
         throw error;
       }
       
+      console.log('Tournament data received:', data);
       const typedTournament: Tournament = {
         id: data.id,
         name: data.name,
@@ -95,6 +125,7 @@ export const useTournamentQueries = (tournamentId?: string) => {
     if (!tournamentId) return;
     
     try {
+      console.log('Fetching teams for tournament:', tournamentId);
       const { data, error } = await supabase
         .from('teams')
         .select('*')
@@ -106,21 +137,33 @@ export const useTournamentQueries = (tournamentId?: string) => {
         throw error;
       }
       
-      const typedTeams: Team[] = (data || []).map(team => ({
+      console.log('Raw teams data from database:', data);
+      if (!data || !Array.isArray(data)) {
+        console.error('Invalid teams data:', data);
+        setTeams([]);
+        return;
+      }
+
+      const typedTeams: Team[] = data.map(team => ({
         id: team.id,
         tournament_id: team.tournament_id,
         name: team.name,
         institution: team.institution || undefined,
         speaker_1: team.speaker_1 || undefined,
         speaker_2: team.speaker_2 || undefined,
+        experience_level: team.experience_level || 'novice',
+        break_category: team.break_category || undefined,
         created_at: team.created_at,
         updated_at: team.updated_at
       }));
       
+      console.log('Typed teams after processing:', typedTeams);
+      console.log('Number of teams:', typedTeams.length);
       setTeams(typedTeams);
     } catch (error) {
       console.error('Error fetching teams:', error);
       toast.error('Failed to fetch teams');
+      setTeams([]);
     }
   }, [tournamentId]);
 
@@ -165,7 +208,9 @@ export const useTournamentQueries = (tournamentId?: string) => {
             institution,
             tournament_id,
             speaker_1,
-            speaker_2
+            speaker_2,
+            experience_level,
+            break_category
           ),
           opp_team:teams!draws_opp_team_id_fkey(
             id,
@@ -173,61 +218,38 @@ export const useTournamentQueries = (tournamentId?: string) => {
             institution,
             tournament_id,
             speaker_1,
-            speaker_2
-          ),
-          round:rounds!draws_round_id_fkey(round_number)
+            speaker_2,
+            experience_level,
+            break_category
+          )
         `)
-        .in('round_id', roundIds);
+        .in('round_id', roundIds)
+        .order('room');
 
       if (error) {
         console.error('Error fetching draws:', error);
         throw error;
       }
       
-      const typedDraws: Draw[] = (data || [])
-        .map(draw => {
-          if (!draw.gov_team || !draw.opp_team || !draw.round) {
-            console.warn('Draw missing required relationships:', draw);
-            return null;
-          }
-
-          return {
-            id: draw.id,
-            round_id: draw.round_id,
-            room: draw.room,
-            gov_team_id: draw.gov_team_id,
-            opp_team_id: draw.opp_team_id,
-            judge: draw.judge || undefined,
-            status: (draw.status as 'pending' | 'in_progress' | 'completed') || 'pending',
-            gov_score: draw.gov_score || undefined,
-            opp_score: draw.opp_score || undefined,
-            gov_team: {
-              id: draw.gov_team.id,
-              tournament_id: draw.gov_team.tournament_id,
-              name: draw.gov_team.name,
-              institution: draw.gov_team.institution || undefined,
-              speaker_1: draw.gov_team.speaker_1 || undefined,
-              speaker_2: draw.gov_team.speaker_2 || undefined
-            },
-            opp_team: {
-              id: draw.opp_team.id,
-              tournament_id: draw.opp_team.tournament_id,
-              name: draw.opp_team.name,
-              institution: draw.opp_team.institution || undefined,
-              speaker_1: draw.opp_team.speaker_1 || undefined,
-              speaker_2: draw.opp_team.speaker_2 || undefined
-            },
-            round: { round_number: draw.round.round_number },
-            created_at: draw.created_at,
-            updated_at: draw.updated_at
-          } as Draw;
-        })
-        .filter((draw): draw is Draw => draw !== null);
+      const typedDraws: Draw[] = (data || []).map(draw => ({
+        id: draw.id,
+        round_id: draw.round_id,
+        tournament_id: tournamentId,
+        room: draw.room,
+        gov_team_id: draw.gov_team_id,
+        opp_team_id: draw.opp_team_id,
+        status: (draw.status as 'pending' | 'in_progress' | 'completed') || 'pending',
+        created_at: draw.created_at,
+        updated_at: draw.updated_at,
+        gov_team: draw.gov_team,
+        opp_team: draw.opp_team
+      }));
       
       setDraws(typedDraws);
     } catch (error) {
       console.error('Error fetching draws:', error);
       toast.error('Failed to fetch draws');
+      setDraws([]);
     }
   }, [tournamentId]);
 

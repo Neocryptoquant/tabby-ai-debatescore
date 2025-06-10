@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Round, Team } from '@/types/tournament';
@@ -92,12 +91,18 @@ export const useTournamentMutations = (
         institution: data.institution || undefined,
         speaker_1: data.speaker_1 || undefined,
         speaker_2: data.speaker_2 || undefined,
+        experience_level: data.experience_level || 'novice',
+        break_category: data.break_category || undefined,
         created_at: data.created_at,
         updated_at: data.updated_at
       };
       
       if (setTeams) {
-        setTeams(prev => [...prev, typedTeam].sort((a, b) => a.name.localeCompare(b.name)));
+        setTeams(prev => {
+          const newTeams = [...prev, typedTeam].sort((a, b) => a.name.localeCompare(b.name));
+          console.log('Updated teams array:', newTeams);
+          return newTeams;
+        });
       }
       
       toast.success('👥 Team added successfully!', {
@@ -109,6 +114,46 @@ export const useTournamentMutations = (
     } catch (error) {
       console.error('Error adding team:', error);
       toast.error('❌ Failed to add team', {
+        description: 'Please check team details and try again',
+        duration: 4000,
+      });
+      throw error;
+    }
+  };
+
+  const updateTeam = async (teamId: string, teamData: Partial<Omit<Team, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>>) => {
+    if (!tournamentId) {
+      console.error('No tournament ID provided for updateTeam');
+      return;
+    }
+    try {
+      console.log('Updating team with data:', teamData);
+      const { data, error } = await supabase
+        .from('teams')
+        .update({ ...teamData })
+        .eq('id', teamId)
+        .eq('tournament_id', tournamentId)
+        .select()
+        .single();
+      if (error) {
+        console.error('Error updating team:', error);
+        throw error;
+      }
+      if (setTeams) {
+        setTeams(prev => {
+          const newTeams = prev.map(team => team.id === teamId ? { ...team, ...teamData } : team);
+          console.log('Updated teams array:', newTeams);
+          return newTeams;
+        });
+      }
+      toast.success('✅ Team updated successfully!', {
+        description: `${teamData.name || ''} has been updated`,
+        duration: 3000,
+      });
+      return data;
+    } catch (error) {
+      console.error('Error updating team:', error);
+      toast.error('❌ Failed to update team', {
         description: 'Please check team details and try again',
         duration: 4000,
       });
@@ -164,7 +209,11 @@ export const useTournamentMutations = (
       console.log('Team deleted successfully');
       
       if (setTeams) {
-        setTeams(prev => prev.filter(team => team.id !== teamId));
+        setTeams(prev => {
+          const newTeams = prev.filter(team => team.id !== teamId);
+          console.log('Updated teams array:', newTeams);
+          return newTeams;
+        });
       }
       
       toast.success('🗑️ Team deleted successfully!', {
@@ -181,6 +230,7 @@ export const useTournamentMutations = (
   return {
     addRound,
     addTeam,
+    updateTeam,
     deleteRound,
     deleteTeam
   };

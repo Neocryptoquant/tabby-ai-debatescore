@@ -1,16 +1,7 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-
-export interface Judge {
-  id: string;
-  tournament_id: string;
-  name: string;
-  institution?: string;
-  experience_level?: string;
-  created_at: string;
-}
+import { Judge, JudgeFormData, ExperienceLevel } from '@/types/tournament';
 
 export const useJudgesOperations = (tournamentId?: string) => {
   const [judges, setJudges] = useState<Judge[]>([]);
@@ -29,7 +20,16 @@ export const useJudgesOperations = (tournamentId?: string) => {
 
       if (error) throw error;
       
-      setJudges(data || []);
+      const typedJudges: Judge[] = (data || []).map(judge => ({
+        id: judge.id,
+        tournament_id: judge.tournament_id,
+        name: judge.name,
+        institution: judge.institution || undefined,
+        experience_level: judge.experience_level as ExperienceLevel,
+        created_at: judge.created_at
+      }));
+      
+      setJudges(typedJudges);
     } catch (error) {
       console.error('Error fetching judges:', error);
       toast.error('Failed to fetch judges');
@@ -38,7 +38,7 @@ export const useJudgesOperations = (tournamentId?: string) => {
     }
   }, [tournamentId]);
 
-  const addJudge = async (judgeData: Omit<Judge, 'id' | 'tournament_id' | 'created_at'>) => {
+  const addJudge = async (judgeData: JudgeFormData) => {
     if (!tournamentId) return;
 
     try {
@@ -50,13 +50,53 @@ export const useJudgesOperations = (tournamentId?: string) => {
 
       if (error) throw error;
       
-      setJudges(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      const typedJudge: Judge = {
+        id: data.id,
+        tournament_id: data.tournament_id,
+        name: data.name,
+        institution: data.institution || undefined,
+        experience_level: data.experience_level as ExperienceLevel,
+        created_at: data.created_at
+      };
+      
+      setJudges(prev => [...prev, typedJudge].sort((a, b) => a.name.localeCompare(b.name)));
       toast.success('Judge added successfully!');
       
-      return data;
+      return typedJudge;
     } catch (error) {
       console.error('Error adding judge:', error);
       toast.error('Failed to add judge');
+      throw error;
+    }
+  };
+
+  const updateJudge = async (judgeId: string, judgeData: Partial<JudgeFormData>) => {
+    if (!tournamentId) return;
+    try {
+      const { data, error } = await supabase
+        .from('judges')
+        .update({ ...judgeData })
+        .eq('id', judgeId)
+        .eq('tournament_id', tournamentId)
+        .select()
+        .single();
+      if (error) throw error;
+      
+      const typedJudge: Judge = {
+        id: data.id,
+        tournament_id: data.tournament_id,
+        name: data.name,
+        institution: data.institution || undefined,
+        experience_level: data.experience_level as ExperienceLevel,
+        created_at: data.created_at
+      };
+      
+      setJudges(prev => prev.map(judge => judge.id === judgeId ? typedJudge : judge));
+      toast.success('Judge updated successfully!');
+      return typedJudge;
+    } catch (error) {
+      console.error('Error updating judge:', error);
+      toast.error('Failed to update judge');
       throw error;
     }
   };
@@ -84,6 +124,7 @@ export const useJudgesOperations = (tournamentId?: string) => {
     isLoading,
     fetchJudges,
     addJudge,
+    updateJudge,
     deleteJudge
   };
 };

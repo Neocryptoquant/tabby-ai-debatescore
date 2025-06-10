@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,37 +8,75 @@ import { Textarea } from "@/components/ui/textarea";
 import { Save, Plus } from "lucide-react";
 import { OperationFeedback } from "@/components/feedback/OperationFeedback";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
-interface RoundFormData {
-  round_number: number;
-  motion: string;
-  info_slide: string;
-  start_time: string;
-}
+const roundFormSchema = z.object({
+  round_number: z.number()
+    .min(1, "Round number must be at least 1")
+    .max(100, "Round number cannot exceed 100"),
+  motion: z.string()
+    .min(10, "Motion must be at least 10 characters long")
+    .max(500, "Motion cannot exceed 500 characters"),
+  info_slide: z.string()
+    .max(1000, "Info slide cannot exceed 1000 characters")
+    .optional(),
+  start_time: z.string()
+    .refine((date) => new Date(date) > new Date(), {
+      message: "Start time must be in the future"
+    })
+});
+
+type RoundFormData = z.infer<typeof roundFormSchema>;
 
 interface RoundFormProps {
   tournamentId: string;
   onSave: (data: RoundFormData) => Promise<void>;
   isLoading?: boolean;
+  existingRounds?: number[];
 }
 
 /**
  * Form component for adding new rounds to tournaments
  * Includes motion input, scheduling, and enhanced user feedback
  */
-export const RoundForm = ({ tournamentId, onSave, isLoading = false }: RoundFormProps) => {
+export const RoundForm = ({ 
+  tournamentId, 
+  onSave, 
+  isLoading = false,
+  existingRounds = []
+}: RoundFormProps) => {
   const [operationStatus, setOperationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<RoundFormData>();
+    setError,
+  } = useForm<RoundFormData>({
+    resolver: zodResolver(roundFormSchema),
+    defaultValues: {
+      round_number: 1,
+      motion: '',
+      info_slide: '',
+      start_time: new Date().toISOString().slice(0, 16)
+    }
+  });
 
   const onSubmit = async (data: RoundFormData) => {
-    console.log('Creating new round:', data);
+    // Check for duplicate round numbers
+    if (existingRounds.includes(data.round_number)) {
+      setError('round_number', {
+        type: 'manual',
+        message: 'This round number already exists'
+      });
+      return;
+    }
+
     setOperationStatus('loading');
+    setErrorMessage('');
     
     try {
       await onSave(data);
@@ -50,6 +87,7 @@ export const RoundForm = ({ tournamentId, onSave, isLoading = false }: RoundForm
       setTimeout(() => setOperationStatus('idle'), 3000);
     } catch (error) {
       setOperationStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to create round');
       // Reset status after showing error
       setTimeout(() => setOperationStatus('idle'), 4000);
     }
@@ -69,7 +107,7 @@ export const RoundForm = ({ tournamentId, onSave, isLoading = false }: RoundForm
           <OperationFeedback
             status={operationStatus}
             successMessage="Round created successfully! 🎯"
-            errorMessage="Failed to create round. Please try again."
+            errorMessage={errorMessage || "Failed to create round. Please try again."}
             loadingMessage="Creating round..."
           />
 
@@ -81,9 +119,7 @@ export const RoundForm = ({ tournamentId, onSave, isLoading = false }: RoundForm
                 type="number"
                 min="1"
                 {...register("round_number", { 
-                  required: "Round number is required",
-                  valueAsNumber: true,
-                  min: { value: 1, message: "Round number must be at least 1" }
+                  valueAsNumber: true
                 })}
                 placeholder="1"
                 disabled={isLoading}
@@ -101,6 +137,9 @@ export const RoundForm = ({ tournamentId, onSave, isLoading = false }: RoundForm
                 {...register("start_time")}
                 disabled={isLoading}
               />
+              {errors.start_time && (
+                <p className="text-sm text-red-600 mt-1">{errors.start_time.message}</p>
+              )}
             </div>
           </div>
 
@@ -108,7 +147,7 @@ export const RoundForm = ({ tournamentId, onSave, isLoading = false }: RoundForm
             <Label htmlFor="motion">Motion</Label>
             <Textarea
               id="motion"
-              {...register("motion", { required: "Motion is required" })}
+              {...register("motion")}
               placeholder="This house believes that..."
               rows={3}
               disabled={isLoading}
@@ -127,6 +166,9 @@ export const RoundForm = ({ tournamentId, onSave, isLoading = false }: RoundForm
               rows={2}
               disabled={isLoading}
             />
+            {errors.info_slide && (
+              <p className="text-sm text-red-600 mt-1">{errors.info_slide.message}</p>
+            )}
           </div>
 
           <Button 

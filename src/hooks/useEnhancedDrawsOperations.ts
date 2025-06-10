@@ -1,8 +1,8 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Round, Team, Draw } from '@/types/tournament';
+import { DrawGenerator } from '@/services/drawGenerator';
 
 export interface DrawGenerationHistory {
   id: string;
@@ -42,8 +42,8 @@ export const useEnhancedDrawsOperations = (
     }
   }, [tournamentId]);
 
-  const generateDrawsWithHistory = async (roundId: string, method: string = 'power_pairing') => {
-    if (!tournamentId || !teams || !rounds || teams.length < 2) {
+  const generateDrawsWithHistory = async (roundId: string, teams: Team[], rooms: string[]) => {
+    if (!tournamentId || !teams || !Array.isArray(teams) || teams.length < 2) {
       toast.error('⚠️ Cannot generate draws', {
         description: 'Need at least 2 teams to generate draws',
         duration: 4000,
@@ -51,7 +51,7 @@ export const useEnhancedDrawsOperations = (
       return;
     }
 
-    const targetRound = rounds.find(r => r.id === roundId);
+    const targetRound = rounds?.find(r => r.id === roundId);
     if (!targetRound) {
       toast.error('Round not found');
       return;
@@ -65,7 +65,7 @@ export const useEnhancedDrawsOperations = (
         .insert([{
           tournament_id: tournamentId,
           round_id: roundId,
-          generation_method: method,
+          generation_method: 'power_pairing',
           generation_params: { team_count: teams.length, judge_count: judges?.length || 0 },
           is_current: true
         }])
@@ -88,32 +88,24 @@ export const useEnhancedDrawsOperations = (
         .delete()
         .eq('round_id', roundId);
 
-      // Generate new draws
-      const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
-      const availableRooms = ['Room A', 'Room B', 'Room C', 'Room D']; // Use default rooms since Round type doesn't have default_rooms
-      const availableJudges = judges || [];
-      
-      const newDraws = [];
-      for (let i = 0; i < shuffledTeams.length; i += 2) {
-        if (i + 1 < shuffledTeams.length) {
-          const roomIndex = Math.floor(i / 2);
-          const judgeIndex = roomIndex < availableJudges.length ? roomIndex : null;
-          
-          newDraws.push({
-            round_id: roundId,
-            room: availableRooms[roomIndex % availableRooms.length] || `Room ${roomIndex + 1}`,
-            gov_team_id: shuffledTeams[i].id,
-            opp_team_id: shuffledTeams[i + 1].id,
-            judge_id: judgeIndex !== null ? availableJudges[judgeIndex].id : null,
-            status: 'pending' as const,
-            generation_history_id: historyRecord.id
-          });
-        }
-      }
+      // Generate new draws using the DrawGenerator service
+      const generator = new DrawGenerator(teams, targetRound.round_number, rooms);
+      const draws = generator.generateDraws();
 
+      // Save draws to database
       const { error: insertError } = await supabase
         .from('draws')
-        .insert(newDraws);
+        .insert(
+          draws.map(draw => ({
+            round_id: roundId,
+            tournament_id: tournamentId,
+            room: draw.room,
+            gov_team_id: draw.teams.OG.id,
+            opp_team_id: draw.teams.OO.id,
+            status: 'pending' as const,
+            generation_history_id: historyRecord.id
+          }))
+        );
 
       if (insertError) throw insertError;
       
@@ -124,15 +116,18 @@ export const useEnhancedDrawsOperations = (
       await fetchGenerationHistory();
       
       toast.success('🎲 Draws generated successfully!', {
-        description: `Generated ${newDraws.length} pairings with ${method.replace('_', ' ')} algorithm`,
+        description: `Generated ${draws.length} pairings with power pairing algorithm`,
         duration: 3000,
       });
+
+      return draws;
     } catch (error) {
       console.error('Error generating draws:', error);
       toast.error('❌ Failed to generate draws', {
         description: 'Please try again or contact support',
         duration: 4000,
       });
+      return null;
     } finally {
       setIsGenerating(false);
     }
@@ -167,7 +162,10 @@ export const useEnhancedDrawsOperations = (
 
       // This would require storing the actual draw data in the history
       // For now, we'll regenerate with the same method
-      await generateDrawsWithHistory(historyRecord.round_id, historyRecord.generation_method);
+      if (teams) {
+        const rooms = Array.from({ length: Math.ceil(teams.length / 2) }, (_, i) => `Room ${i + 1}`);
+        await generateDrawsWithHistory(historyRecord.round_id, teams, rooms);
+      }
       
       toast.success('Draws rolled back successfully!');
     } catch (error) {

@@ -1,16 +1,21 @@
-
 import { useTournamentData } from "@/hooks/useTournamentData";
 import { TeamsTab } from "./TeamsTab";
 import { useState } from "react";
 import { toast } from "sonner";
+import { TeamForm } from "./TeamForm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CSVUpload } from "./CSVUpload";
 
 interface TeamsTabContainerProps {
   tournamentId: string;
 }
 
 export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
-  const { teams, addTeam, deleteTeam, isLoading, refetch } = useTournamentData(tournamentId);
+  const { teams, addTeam, updateTeam, deleteTeam, isLoading, refetch } = useTournamentData(tournamentId);
   const [isSaving, setIsSaving] = useState(false);
+  const [editTeam, setEditTeam] = useState<any | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
 
   const transformedTeams = teams.map(team => ({
     id: team.id,
@@ -39,8 +44,28 @@ export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
   };
 
   const handleEditTeam = (team: any) => {
-    toast.info('Edit functionality coming soon!');
-    console.log('Edit team:', team);
+    setEditTeam(team);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateTeam = async (data: any) => {
+    setIsSaving(true);
+    try {
+      await updateTeam(editTeam.id, {
+        name: data.name,
+        institution: data.institution,
+        speaker_1: data.speaker1_name,
+        speaker_2: data.speaker2_name
+      });
+      setIsEditModalOpen(false);
+      setEditTeam(null);
+      toast.success('Team updated successfully!');
+    } catch (error) {
+      console.error('Error updating team:', error);
+      toast.error('Failed to update team');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteTeam = async (teamId: string) => {
@@ -54,7 +79,24 @@ export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
   };
 
   const handleBulkImport = () => {
-    toast.info('Use the CSV upload in the Overview tab for bulk import');
+    setIsCSVModalOpen(true);
+  };
+
+  const handleTeamsUploaded = async (teams: any[]) => {
+    setIsSaving(true);
+    let successCount = 0;
+    let errorCount = 0;
+    for (const team of teams) {
+      try {
+        await addTeam(team);
+        successCount++;
+      } catch (error) {
+        errorCount++;
+      }
+    }
+    setIsSaving(false);
+    setIsCSVModalOpen(false);
+    toast.success(`Imported ${successCount} teams${errorCount ? ", " + errorCount + " failed" : ""}`);
   };
 
   const generateTeamStats = () => {
@@ -63,16 +105,46 @@ export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
   };
 
   return (
-    <TeamsTab
-      transformedTeams={transformedTeams}
-      isLoading={isLoading}
-      isSaving={isSaving}
-      handleAddTeam={handleAddTeam}
-      handleEditTeam={handleEditTeam}
-      handleDeleteTeam={handleDeleteTeam}
-      handleBulkImport={handleBulkImport}
-      generateTeamStats={generateTeamStats}
-      teams={teams}
-    />
+    <>
+      <TeamsTab
+        transformedTeams={transformedTeams}
+        isLoading={isLoading}
+        isSaving={isSaving}
+        handleAddTeam={handleAddTeam}
+        handleEditTeam={handleEditTeam}
+        handleDeleteTeam={handleDeleteTeam}
+        handleBulkImport={handleBulkImport}
+        generateTeamStats={generateTeamStats}
+        teams={teams}
+      />
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Team</DialogTitle>
+          </DialogHeader>
+          {editTeam && (
+            <TeamForm
+              onSave={handleUpdateTeam}
+              isLoading={isSaving}
+              defaultValues={{
+                name: editTeam.name,
+                institution: editTeam.institution,
+                speaker1_name: editTeam.speaker_1,
+                speaker2_name: editTeam.speaker_2
+              }}
+              isEditMode
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isCSVModalOpen} onOpenChange={setIsCSVModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Import Teams</DialogTitle>
+          </DialogHeader>
+          <CSVUpload onTeamsUploaded={handleTeamsUploaded} />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

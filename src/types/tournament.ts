@@ -1,4 +1,3 @@
-
 /**
  * Tournament-related type definitions
  */
@@ -49,18 +48,15 @@ export interface Team {
 export interface Draw {
   id: string;
   round_id: string;
+  tournament_id: string;
   room: string;
   gov_team_id: string;
   opp_team_id: string;
-  judge?: string;
   status: 'pending' | 'in_progress' | 'completed';
-  gov_score?: number;
-  opp_score?: number;
-  gov_team: Team;
-  opp_team: Team;
-  round: { round_number: number };
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
+  gov_team?: Team;
+  opp_team?: Team;
 }
 
 export type ExperienceLevel = 'novice' | 'intermediate' | 'open' | 'pro';
@@ -80,4 +76,19 @@ export interface TournamentRegistration {
   speaker_2?: string;
   experience_level: ExperienceLevel;
   break_category?: string;
+}
+
+export interface Judge {
+  id: string;
+  tournament_id: string;
+  name: string;
+  institution?: string;
+  experience_level: ExperienceLevel;
+  created_at: string;
+}
+
+export interface JudgeFormData {
+  name: string;
+  institution?: string;
+  experience_level: ExperienceLevel;
 }
