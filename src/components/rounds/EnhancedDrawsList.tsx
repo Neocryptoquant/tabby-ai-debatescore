@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import {
   DndContext,
@@ -71,7 +70,9 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
       ...draw,
       gov_team: props.teams.find(t => t.id === draw.gov_team_id),
       opp_team: props.teams.find(t => t.id === draw.opp_team_id),
-      judge: props.judges.find(j => j.id === draw.judge_id)
+      cg_team: props.teams.find(t => t.id === draw.cg_team_id),
+      co_team: props.teams.find(t => t.id === draw.co_team_id),
+      judge: draw.judge_id ? props.judges.find(j => j.id === draw.judge_id) : undefined
     }));
     setDraws(enhancedDraws);
   }, [props.draws, props.teams, props.judges, selectedRoundId]);

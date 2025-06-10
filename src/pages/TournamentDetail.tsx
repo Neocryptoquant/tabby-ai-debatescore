@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,7 +33,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tournament, Team, Round, Draw, Judge } from "@/types/tournament";
+import { Tournament, Team, Round, Draw, Judge, JudgeFormData } from "@/types/tournament";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useDrawGenerator } from "@/hooks/useDrawGenerator";
 import { TeamsList } from "@/components/teams/TeamsList";
@@ -47,12 +46,6 @@ interface TournamentCardData {
   teamCount: number;
   location: string;
   status: 'active' | 'upcoming' | 'completed';
-}
-
-interface JudgeFormData {
-  name: string;
-  institution?: string;
-  experience_level: 'novice' | 'intermediate' | 'open' | 'pro';
 }
 
 interface EnhancedRoundFormData {

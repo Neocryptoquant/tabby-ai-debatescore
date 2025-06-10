@@ -1,3 +1,4 @@
+
 /**
  * Tournament-related type definitions
  */
@@ -39,6 +40,8 @@ export interface Team {
   institution?: string;
   speaker_1?: string;
   speaker_2?: string;
+  speaker1_name?: string;
+  speaker2_name?: string;
   experience_level?: ExperienceLevel;
   break_category?: string;
   created_at?: string;
@@ -52,11 +55,17 @@ export interface Draw {
   room: string;
   gov_team_id: string;
   opp_team_id: string;
+  cg_team_id?: string;
+  co_team_id?: string;
+  judge_id?: string;
   status: 'pending' | 'in_progress' | 'completed';
   created_at: string;
   updated_at: string;
   gov_team?: Team;
   opp_team?: Team;
+  cg_team?: Team;
+  co_team?: Team;
+  judge?: Judge;
 }
 
 export type ExperienceLevel = 'novice' | 'intermediate' | 'open' | 'pro';
