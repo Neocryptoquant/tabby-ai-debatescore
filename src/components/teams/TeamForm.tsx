@@ -8,14 +8,13 @@ import { Save, Users } from "lucide-react";
 import { OperationFeedback } from "@/components/feedback/OperationFeedback";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import React from "react";
+import { Team } from "@/types/tournament";
 
 interface TeamFormData {
   name: string;
   institution: string;
-  speaker1_name: string;
-  speaker2_name: string;
-  speaker3_name?: string;
-  speaker4_name?: string;
+  speaker_1: string;
+  speaker_2: string;
 }
 
 interface TeamFormProps {
@@ -111,65 +110,44 @@ export const TeamForm = ({ onSave, isLoading = false, defaultValues = {}, isEdit
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h4 className="font-medium text-gray-900">Team Members</h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="speaker1_name">Speaker 1 *</Label>
-                <Input
-                  id="speaker1_name"
-                  {...register("speaker1_name", { required: "Speaker 1 name is required" })}
-                  placeholder="First speaker name"
-                  disabled={isLoading}
-                />
-                {errors.speaker1_name && (
-                  <p className="text-sm text-red-600 mt-1">{errors.speaker1_name.message}</p>
-                )}
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="speaker_1">Speaker 1 *</Label>
+              <Input
+                id="speaker_1"
+                {...register("speaker_1", { required: "Speaker 1 is required" })}
+                placeholder="First Speaker"
+                disabled={isLoading}
+              />
+              {errors.speaker_1 && (
+                <p className="text-sm text-red-600 mt-1">{errors.speaker_1.message}</p>
+              )}
+            </div>
 
-              <div>
-                <Label htmlFor="speaker2_name">Speaker 2 *</Label>
-                <Input
-                  id="speaker2_name"
-                  {...register("speaker2_name", { required: "Speaker 2 name is required" })}
-                  placeholder="Second speaker name"
-                  disabled={isLoading}
-                />
-                {errors.speaker2_name && (
-                  <p className="text-sm text-red-600 mt-1">{errors.speaker2_name.message}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="speaker3_name">Speaker 3</Label>
-                <Input
-                  id="speaker3_name"
-                  {...register("speaker3_name")}
-                  placeholder="Third speaker name (optional)"
-                  disabled={isLoading}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="speaker4_name">Speaker 4</Label>
-                <Input
-                  id="speaker4_name"
-                  {...register("speaker4_name")}
-                  placeholder="Fourth speaker name (optional)"
-                  disabled={isLoading}
-                />
-              </div>
+            <div>
+              <Label htmlFor="speaker_2">Speaker 2 *</Label>
+              <Input
+                id="speaker_2"
+                {...register("speaker_2", { required: "Speaker 2 is required" })}
+                placeholder="Second Speaker"
+                disabled={isLoading}
+              />
+              {errors.speaker_2 && (
+                <p className="text-sm text-red-600 mt-1">{errors.speaker_2.message}</p>
+              )}
             </div>
           </div>
 
           <Button 
             type="submit" 
+            className="w-full" 
             disabled={isLoading || operationStatus === 'loading'}
-            className="w-full bg-tabby-secondary hover:bg-tabby-secondary/90"
           >
-            {isLoading || operationStatus === 'loading' ? (
-              <LoadingSpinner size="sm" text={isEditMode ? 'Updating Team...' : 'Adding Team...'} />
+            {operationStatus === 'loading' ? (
+              <>
+                <LoadingSpinner size="sm" className="mr-2" />
+                {isEditMode ? 'Updating Team...' : 'Adding Team...'}
+              </>
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />

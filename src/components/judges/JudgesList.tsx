@@ -3,13 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Users, Building2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-
-interface Judge {
-  id: string;
-  name: string;
-  institution?: string;
-  experience_level?: string;
-}
+import { Judge, ExperienceLevel } from "@/types/tournament";
 
 interface JudgesListProps {
   judges: Judge[];
@@ -19,12 +13,12 @@ interface JudgesListProps {
 }
 
 export const JudgesList = ({ judges, onDelete, onEdit, isLoading = false }: JudgesListProps) => {
-  const getExperienceColor = (level?: string) => {
+  const getExperienceColor = (level?: ExperienceLevel) => {
     switch (level) {
       case 'novice': return 'bg-blue-100 text-blue-800';
       case 'intermediate': return 'bg-green-100 text-green-800';
-      case 'experienced': return 'bg-orange-100 text-orange-800';
-      case 'expert': return 'bg-purple-100 text-purple-800';
+      case 'open': return 'bg-orange-100 text-orange-800';
+      case 'pro': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };

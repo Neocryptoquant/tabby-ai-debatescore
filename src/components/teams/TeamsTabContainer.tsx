@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { TeamForm } from "./TeamForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CSVUpload } from "./CSVUpload";
+import { Team } from "@/types/tournament";
 
 interface TeamsTabContainerProps {
   tournamentId: string;
@@ -13,13 +14,12 @@ interface TeamsTabContainerProps {
 export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
   const { teams, addTeam, updateTeam, deleteTeam, isLoading, refetch } = useTournamentData(tournamentId);
   const [isSaving, setIsSaving] = useState(false);
-  const [editTeam, setEditTeam] = useState<any | null>(null);
+  const [editTeam, setEditTeam] = useState<Team | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
 
   const transformedTeams = teams.map(team => ({
-    id: team.id,
-    name: team.name,
+    ...team,
     institution: team.institution || 'No Institution',
     speaker_1: team.speaker_1 || 'TBD',
     speaker_2: team.speaker_2 || 'TBD'
@@ -43,19 +43,21 @@ export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
     }
   };
 
-  const handleEditTeam = (team: any) => {
+  const handleEditTeam = (team: Team) => {
     setEditTeam(team);
     setIsEditModalOpen(true);
   };
 
   const handleUpdateTeam = async (data: any) => {
+    if (!editTeam) return;
+    
     setIsSaving(true);
     try {
       await updateTeam(editTeam.id, {
         name: data.name,
         institution: data.institution,
-        speaker_1: data.speaker1_name,
-        speaker_2: data.speaker2_name
+        speaker_1: data.speaker_1,
+        speaker_2: data.speaker_2
       });
       setIsEditModalOpen(false);
       setEditTeam(null);
@@ -128,9 +130,9 @@ export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
               isLoading={isSaving}
               defaultValues={{
                 name: editTeam.name,
-                institution: editTeam.institution,
-                speaker1_name: editTeam.speaker_1,
-                speaker2_name: editTeam.speaker_2
+                institution: editTeam.institution || '',
+                speaker_1: editTeam.speaker_1 || '',
+                speaker_2: editTeam.speaker_2 || ''
               }}
               isEditMode
             />

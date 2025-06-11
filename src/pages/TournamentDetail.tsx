@@ -33,7 +33,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tournament, Team, Round, Draw, Judge, JudgeFormData } from "@/types/tournament";
+import { Tournament, Team, Round, Draw, Judge, JudgeFormData, ExperienceLevel } from "@/types/tournament";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useDrawGenerator } from "@/hooks/useDrawGenerator";
 import { TeamsList } from "@/components/teams/TeamsList";
@@ -489,6 +489,7 @@ const TournamentDetail = () => {
             <TeamsList
               teams={teams}
               onDelete={deleteTeam}
+              onEdit={(team) => console.log('Edit team:', team)}
             />
           </TabsContent>
 

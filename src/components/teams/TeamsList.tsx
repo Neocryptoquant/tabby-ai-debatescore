@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,16 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface Team {
-  id: string;
-  name: string;
-  institution: string;
-  speaker1_name: string;
-  speaker2_name: string;
-  speaker3_name?: string;
-  speaker4_name?: string;
-}
+import { Team } from "@/types/tournament";
 
 interface TeamsListProps {
   teams: Team[];
@@ -89,19 +79,13 @@ export const TeamsList = ({ teams, onEdit, onDelete, isLoading = false }: TeamsL
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <School className="h-4 w-4 text-gray-400" />
-                    {team.institution}
+                    {team.institution || 'No Institution'}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="space-y-1">
-                    <div className="text-sm">{team.speaker1_name}</div>
-                    <div className="text-sm">{team.speaker2_name}</div>
-                    {team.speaker3_name && (
-                      <div className="text-sm text-gray-600">{team.speaker3_name}</div>
-                    )}
-                    {team.speaker4_name && (
-                      <div className="text-sm text-gray-600">{team.speaker4_name}</div>
-                    )}
+                    <div className="text-sm">{team.speaker_1 || 'TBD'}</div>
+                    <div className="text-sm">{team.speaker_2 || 'TBD'}</div>
                   </div>
                 </TableCell>
                 <TableCell className="text-right">

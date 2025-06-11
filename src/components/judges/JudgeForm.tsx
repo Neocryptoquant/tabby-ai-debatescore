@@ -8,12 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Users } from "lucide-react";
 import React from "react";
-
-interface JudgeFormData {
-  name: string;
-  institution: string;
-  experience_level: string;
-}
+import { JudgeFormData, ExperienceLevel } from "@/types/tournament";
 
 interface JudgeFormProps {
   onSave: (data: JudgeFormData) => Promise<void>;
@@ -94,7 +89,7 @@ export const JudgeForm = ({ onSave, isLoading = false, defaultValues = {}, isEdi
           <div>
             <Label htmlFor="experience_level">Experience Level</Label>
             <Select 
-              onValueChange={(value) => setValue("experience_level", value)}
+              onValueChange={(value) => setValue("experience_level", value as ExperienceLevel)}
               disabled={isSaving}
               value={watch("experience_level")}
             >
@@ -104,8 +99,8 @@ export const JudgeForm = ({ onSave, isLoading = false, defaultValues = {}, isEdi
               <SelectContent>
                 <SelectItem value="novice">Novice</SelectItem>
                 <SelectItem value="intermediate">Intermediate</SelectItem>
-                <SelectItem value="experienced">Experienced</SelectItem>
-                <SelectItem value="expert">Expert</SelectItem>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="pro">Pro</SelectItem>
               </SelectContent>
             </Select>
           </div>
