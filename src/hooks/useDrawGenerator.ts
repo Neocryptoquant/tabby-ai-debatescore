@@ -22,16 +22,11 @@ export function useDrawGenerator({ tournamentId, roundId, teams, judges, rooms }
     console.log('Number of judges:', judges?.length);
     console.log('Round ID:', roundId);
     console.log('Tournament ID:', tournamentId);
+    console.log('Rooms:', rooms);
 
     if (!teams || !Array.isArray(teams)) {
       console.error('Teams is not an array:', teams);
       toast.error('Invalid teams data');
-      return;
-    }
-
-    if (teams.length === 0) {
-      console.error('No teams available');
-      toast.error('No teams available for draw generation');
       return;
     }
 
@@ -81,37 +76,39 @@ export function useDrawGenerator({ tournamentId, roundId, teams, judges, rooms }
         throw deleteError;
       }
 
-      // Create enhanced draw generator instance
-      const generator = new EnhancedDrawGenerator(teams, judges, rooms, {
-        method,
-        avoidInstitutionClashes: true,
-        balanceExperience: true
-      });
+      // Create enhanced draw generator instance - limit to 3 rooms as specified
+      const generator = new EnhancedDrawGenerator(
+        teams,
+        judges,
+        rooms.slice(0, 3), // Use only the first 3 rooms
+        {
+          method,
+          avoidInstitutionClashes: true,
+          balanceExperience: true
+        }
+      );
 
       // Generate draw rooms
       const drawRooms = generator.generateDraws();
       console.log('Generated draw rooms:', drawRooms);
 
       // Convert to database format
-      const drawsToInsert = generator.convertToDraws(drawRooms, roundId, tournamentId);
+      const drawsToInsert = drawRooms.map(room => ({
+        round_id: roundId,
+        tournament_id: tournamentId,
+        room: room.room,
+        gov_team_id: room.teams.OG.id,
+        opp_team_id: room.teams.OO.id,
+        judge_id: room.judge?.id,
+        judge: room.judge?.name,
+        status: 'pending'
+      }));
 
       console.log('Inserting draws:', drawsToInsert);
 
-      // Convert to proper database format (only include fields that exist in database)
-      const drawsForDatabase = drawsToInsert.map(draw => ({
-        round_id: draw.round_id,
-        tournament_id: draw.tournament_id,
-        room: draw.room,
-        gov_team_id: draw.gov_team_id,
-        opp_team_id: draw.opp_team_id,
-        judge_id: draw.judge_id,
-        judge: draw.judge,
-        status: draw.status
-      }));
-
       const { data, error } = await supabase
         .from('draws')
-        .insert(drawsForDatabase)
+        .insert(drawsToInsert)
         .select();
 
       if (error) {
@@ -130,6 +127,7 @@ export function useDrawGenerator({ tournamentId, roundId, teams, judges, rooms }
         gov_team_id: draw.gov_team_id,
         opp_team_id: draw.opp_team_id,
         judge_id: draw.judge_id,
+        judge: draw.judge,
         status: draw.status as 'pending' | 'in_progress' | 'completed',
         created_at: draw.created_at,
         updated_at: draw.updated_at

@@ -1,4 +1,3 @@
-
 /**
  * Tournament-related type definitions
  */
@@ -61,6 +60,9 @@ export interface Draw {
   judge_id?: string;
   judge?: string;
   status: 'pending' | 'in_progress' | 'completed';
+  gov_score?: number | null;
+  opp_score?: number | null;
+  generation_history_id?: string | null;
   created_at: string;
   updated_at: string;
 }
