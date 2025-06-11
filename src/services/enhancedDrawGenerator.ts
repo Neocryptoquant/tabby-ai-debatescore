@@ -1,4 +1,3 @@
-
 import { Team, Judge, Draw } from "@/types/tournament";
 
 interface DrawRoom {
@@ -179,11 +178,15 @@ export class EnhancedDrawGenerator {
       room: room.room,
       gov_team_id: room.teams.OG.id,    // Opening Government
       opp_team_id: room.teams.OO.id,    // Opening Opposition
-      cg_team_id: room.teams.CG.id,     // Closing Government  
-      co_team_id: room.teams.CO.id,     // Closing Opposition
+      // Don't include cg_team_id and co_team_id if they don't exist in the database schema
+      // cg_team_id: room.teams.CG.id,     // Closing Government  
+      // co_team_id: room.teams.CO.id,     // Closing Opposition
       judge_id: room.judge?.id,
       judge: room.judge?.name,
-      status: 'pending' as const
+      status: 'pending' as const,
+      gov_score: null,
+      opp_score: null,
+      generation_history_id: null
     }));
   }
 

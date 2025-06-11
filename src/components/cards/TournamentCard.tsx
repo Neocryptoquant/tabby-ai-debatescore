@@ -30,7 +30,7 @@ export function TournamentCard({
   className
 }: TournamentCardProps) {
   return (
-    <div className={cn("tabby-card", className)}>
+    <div className={cn("tabby-card group", className)}>
       <Link 
         to={`/tournaments/${id}`} 
         className="flex justify-between items-start hover:no-underline"

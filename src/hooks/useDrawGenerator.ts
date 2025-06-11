@@ -1,5 +1,3 @@
-
-
 import { useState, useCallback } from 'react';
 import { Team, Draw, Judge } from '@/types/tournament';
 import { supabase } from '@/integrations/supabase/client';
@@ -107,6 +105,7 @@ export function useDrawGenerator({ tournamentId, roundId, teams, judges, rooms }
         gov_team_id: draw.gov_team_id,
         opp_team_id: draw.opp_team_id,
         judge_id: draw.judge_id,
+        judge: draw.judge,
         status: draw.status
       }));
 
@@ -160,4 +159,3 @@ export function useDrawGenerator({ tournamentId, roundId, teams, judges, rooms }
     generationHistory
   };
 }
-

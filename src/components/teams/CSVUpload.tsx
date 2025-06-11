@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Upload, Download, FileText, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,33 +34,74 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis`;
     if (lines.length < 2) return [];
 
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const requiredHeaders = ['team_name', 'institution', 'speaker_1', 'speaker_2'];
     
     // Check if all required headers are present
-    const missingHeaders = requiredHeaders.filter(header => 
-      !headers.some(h => h.includes(header.replace('_', '')))
-    );
+    const requiredHeaders = ['team_name', 'institution', 'speaker_1', 'speaker_2'];
+    const missingHeaders = [];
+    
+    for (const required of requiredHeaders) {
+      // Check for exact match or partial match (e.g., "team name" for "team_name")
+      const found = headers.some(h => 
+        h === required || 
+        h === required.replace('_', ' ') || 
+        h === required.replace('_', '')
+      );
+      
+      if (!found) {
+        missingHeaders.push(required);
+      }
+    }
     
     if (missingHeaders.length > 0) {
       throw new Error(`Missing required columns: ${missingHeaders.join(', ')}`);
+    }
+
+    // Map header indices
+    const headerIndices: Record<string, number> = {};
+    for (const required of requiredHeaders) {
+      const index = headers.findIndex(h => 
+        h === required || 
+        h === required.replace('_', ' ') || 
+        h === required.replace('_', '')
+      );
+      
+      if (index !== -1) {
+        headerIndices[required] = index;
+      }
     }
 
     const teams: any[] = [];
     const errors: string[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      // Handle quoted values properly
+      let values: string[] = [];
+      let currentValue = '';
+      let inQuotes = false;
       
-      if (values.length < headers.length) {
+      // Split by commas, but respect quotes
+      for (let char of lines[i]) {
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          values.push(currentValue.trim());
+          currentValue = '';
+        } else {
+          currentValue += char;
+        }
+      }
+      values.push(currentValue.trim()); // Add the last value
+      
+      if (values.length < Object.keys(headerIndices).length) {
         errors.push(`Row ${i + 1}: Insufficient data`);
         continue;
       }
 
       const team = {
-        name: values[0] || '',
-        institution: values[1] || '',
-        speaker_1: values[2] || '',
-        speaker_2: values[3] || ''
+        name: values[headerIndices['team_name']] || '',
+        institution: values[headerIndices['institution']] || '',
+        speaker_1: values[headerIndices['speaker_1']] || '',
+        speaker_2: values[headerIndices['speaker_2']] || ''
       };
 
       if (!team.name) {
@@ -93,6 +133,8 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis`;
 
     try {
       const text = await file.text();
+      console.log("CSV content:", text); // Debug log
+      
       const teams = parseCSV(text);
       
       if (teams.length === 0) {
@@ -100,6 +142,7 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis`;
         return;
       }
 
+      console.log("Parsed teams:", teams); // Debug log
       onTeamsUploaded(teams);
       toast.success(`Successfully parsed ${teams.length} teams from CSV`);
       
