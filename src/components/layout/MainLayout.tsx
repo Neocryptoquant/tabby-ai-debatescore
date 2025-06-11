@@ -1,4 +1,3 @@
-
 import { useState, ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -55,7 +54,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
         
       if (error) {
         console.error("Error fetching profile:", error);

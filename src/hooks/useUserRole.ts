@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,19 +31,15 @@ export function useUserRole() {
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (roleError) {
           console.error('Error fetching user role:', roleError);
-          
-          // PGRST116 means no rows returned - user has no role assigned yet
-          if (roleError.code === 'PGRST116') {
-            console.log('No role found for user - user needs to be assigned a role');
-            setRole(null);
-          } else {
-            console.error('Database error:', roleError);
-            setRole(null);
-          }
+          setRole(null);
+        } else if (!roleData) {
+          // No role found for user - user needs to be assigned a role
+          console.log('No role found for user - user needs to be assigned a role');
+          setRole(null);
         } else {
           console.log('User role found:', roleData.role);
           setRole(roleData.role);
