@@ -86,44 +86,68 @@ export class EnhancedDrawGenerator {
     return this.judges[judgeIndex];
   }
 
+  // Create a swing team when needed
+  private createSwingTeam(index: number): Team {
+    return {
+      id: `swing-${index}`,
+      tournament_id: this.teams[0]?.tournament_id || 'unknown',
+      name: `Swing Team ${String.fromCharCode(65 + index)}`, // A, B, C, etc.
+      institution: 'Swing',
+      speaker_1: 'Swing Speaker 1',
+      speaker_2: 'Swing Speaker 2'
+    };
+  }
+
   // Generate draws using the specified method - British Parliamentary format (4 teams per room)
   public generateDraws(): DrawRoom[] {
-    if (this.teams.length < 4) {
-      throw new Error('Need at least 4 teams to generate British Parliamentary draws');
+    if (this.teams.length < 2) {
+      throw new Error('Need at least 2 teams to generate draws');
     }
 
     const draws: DrawRoom[] = [];
     const shuffledTeams = this.shuffleArray(this.teams);
-    const numRooms = Math.floor(shuffledTeams.length / 4); // BP format: 4 teams per room
-
+    
+    // Use only the number of rooms specified, not calculated from team count
+    const numRooms = Math.min(this.rooms.length, Math.ceil(shuffledTeams.length / 4));
+    
     console.log(`Generating BP draws: ${this.teams.length} teams, ${numRooms} rooms`);
 
     // Generate draws for each room
     for (let roomIndex = 0; roomIndex < numRooms; roomIndex++) {
-      const roomTeams = shuffledTeams.slice(roomIndex * 4, (roomIndex + 1) * 4);
+      // Get 4 teams for this room, or create swing teams if needed
+      const roomTeams: Team[] = [];
       
-      if (roomTeams.length === 4) {
-        // Optimize team arrangement to minimize institution clashes
-        const optimizedTeams = this.optimizeTeamArrangement(roomTeams);
-        
-        const drawRoom: DrawRoom = {
-          id: `room-${roomIndex + 1}`,
-          room: this.rooms[roomIndex] || `Room ${roomIndex + 1}`,
-          teams: {
-            OG: optimizedTeams[0], // Opening Government
-            OO: optimizedTeams[1], // Opening Opposition  
-            CG: optimizedTeams[2], // Closing Government
-            CO: optimizedTeams[3]  // Closing Opposition
-          },
-          judge: this.allocateJudge(roomIndex)
-        };
-
-        draws.push(drawRoom);
-
-        // Track this pairing
-        const pairingKey = optimizedTeams.map(t => t.id).sort().join('-');
-        this.usedPairings.add(pairingKey);
+      // Try to get 4 real teams first
+      for (let i = 0; i < 4; i++) {
+        const teamIndex = roomIndex * 4 + i;
+        if (teamIndex < shuffledTeams.length) {
+          roomTeams.push(shuffledTeams[teamIndex]);
+        } else {
+          // Create a swing team if we don't have enough real teams
+          roomTeams.push(this.createSwingTeam(roomTeams.length));
+        }
       }
+      
+      // Optimize team arrangement to minimize institution clashes
+      const optimizedTeams = this.optimizeTeamArrangement(roomTeams);
+      
+      const drawRoom: DrawRoom = {
+        id: `room-${roomIndex + 1}`,
+        room: this.rooms[roomIndex] || `Room ${roomIndex + 1}`,
+        teams: {
+          OG: optimizedTeams[0], // Opening Government
+          OO: optimizedTeams[1], // Opening Opposition  
+          CG: optimizedTeams[2], // Closing Government
+          CO: optimizedTeams[3]  // Closing Opposition
+        },
+        judge: this.allocateJudge(roomIndex)
+      };
+
+      draws.push(drawRoom);
+
+      // Track this pairing
+      const pairingKey = optimizedTeams.map(t => t.id).sort().join('-');
+      this.usedPairings.add(pairingKey);
     }
 
     console.log(`Generated ${draws.length} BP rooms`);
@@ -178,9 +202,8 @@ export class EnhancedDrawGenerator {
       room: room.room,
       gov_team_id: room.teams.OG.id,    // Opening Government
       opp_team_id: room.teams.OO.id,    // Opening Opposition
-      // Don't include cg_team_id and co_team_id if they don't exist in the database schema
-      // cg_team_id: room.teams.CG.id,     // Closing Government  
-      // co_team_id: room.teams.CO.id,     // Closing Opposition
+      cg_team_id: room.teams.CG.id,     // Closing Government  
+      co_team_id: room.teams.CO.id,     // Closing Opposition
       judge_id: room.judge?.id,
       judge: room.judge?.name,
       status: 'pending' as const,

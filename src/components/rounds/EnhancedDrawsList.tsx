@@ -22,6 +22,7 @@ import { Users, Trophy, Shuffle, Play, CheckCircle, Clock, RefreshCw, Gavel } fr
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Team, Draw, Round, Judge, EnhancedDraw } from '@/types/tournament';
+import { EnhancedDrawGenerator } from '@/services/enhancedDrawGenerator';
 import { supabase } from '@/integrations/supabase/client';
 import html2canvas from 'html2canvas';
 
@@ -46,6 +47,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [draws, setDraws] = useState<EnhancedDraw[]>([]);
   const [generationMethod, setGenerationMethod] = useState<'random' | 'power_pairing' | 'swiss' | 'balanced'>('random');
+  const [isAccepted, setIsAccepted] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -61,16 +63,26 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
       // Find the teams by ID
       const govTeam = props.teams.find(t => t.id === draw.gov_team_id);
       const oppTeam = props.teams.find(t => t.id === draw.opp_team_id);
+      const cgTeam = draw.cg_team_id ? props.teams.find(t => t.id === draw.cg_team_id) : undefined;
+      const coTeam = draw.co_team_id ? props.teams.find(t => t.id === draw.co_team_id) : undefined;
       const judgeObj = draw.judge_id ? props.judges.find(j => j.id === draw.judge_id) : undefined;
       
       return {
         ...draw,
         gov_team: govTeam,
         opp_team: oppTeam,
+        cg_team: cgTeam,
+        co_team: coTeam,
         judge_obj: judgeObj
       };
     });
     setDraws(enhancedDraws);
+    
+    // Check if any draws are already in progress or completed
+    const nonPendingDraws = enhancedDraws.filter(draw => draw.status !== 'pending');
+    if (nonPendingDraws.length > 0) {
+      setIsAccepted(true);
+    }
   }, [props.draws, props.teams, props.judges, selectedRoundId]);
 
   const handleGenerateDraws = async () => {
@@ -79,8 +91,8 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
       return;
     }
 
-    if (props.teams.length < 2) {
-      toast.error('Need at least 2 teams to generate draws');
+    if (props.teams.length < 4) {
+      toast.error('Need at least 4 teams to generate British Parliamentary draws');
       return;
     }
 
@@ -94,43 +106,49 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
 
       if (deleteError) throw deleteError;
 
-      // Generate new draws
-      const drawsToInsert = [];
-      const shuffledTeams = [...props.teams].sort(() => Math.random() - 0.5);
-      const numRooms = Math.floor(shuffledTeams.length / 2);
-      
-      for (let i = 0; i < numRooms; i++) {
-        if (i*2+1 < shuffledTeams.length) {
-          const govTeam = shuffledTeams[i*2];
-          const oppTeam = shuffledTeams[i*2+1];
-          
-          drawsToInsert.push({
-            round_id: selectedRoundId,
-            tournament_id: props.tournamentId,
-            room: props.rooms[i] || `Room ${i+1}`,
-            gov_team_id: govTeam.id,
-            opp_team_id: oppTeam.id,
-            judge_id: props.judges[i % props.judges.length]?.id || null,
-            judge: props.judges[i % props.judges.length]?.name || null,
-            status: 'pending'
-          });
+      // Generate new draws using enhanced generator
+      const generator = new EnhancedDrawGenerator(
+        props.teams,
+        props.judges,
+        props.rooms.slice(0, 3), // Limit to 3 rooms as specified
+        {
+          method: generationMethod,
+          avoidInstitutionClashes: true,
+          balanceExperience: true
         }
-      }
+      );
 
-      // Insert new draws
+      const drawRooms = generator.generateDraws();
+      
+      // Convert to database format
+      const drawsForDatabase = drawRooms.map(room => ({
+        round_id: selectedRoundId,
+        tournament_id: props.tournamentId,
+        room: room.room,
+        gov_team_id: room.teams.OG.id,
+        opp_team_id: room.teams.OO.id,
+        cg_team_id: room.teams.CG.id,
+        co_team_id: room.teams.CO.id,
+        judge_id: room.judge?.id,
+        judge: room.judge?.name,
+        status: 'pending'
+      }));
+
       const { data, error } = await supabase
         .from('draws')
-        .insert(drawsToInsert)
+        .insert(drawsForDatabase)
         .select();
 
       if (error) throw error;
 
-      toast.success(`Generated ${drawsToInsert.length} draws successfully!`);
+      toast.success(`Generated ${drawRooms.length} British Parliamentary draws successfully!`);
       
       // Refresh the draws
       if (props.onGenerateDraws) {
         await props.onGenerateDraws(selectedRoundId);
       }
+      
+      setIsAccepted(false);
     } catch (error) {
       console.error('Error generating draws:', error);
       toast.error('Failed to generate draws');
@@ -192,6 +210,29 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
     }
   };
 
+  const handleAcceptDraws = async () => {
+    try {
+      // Update all draws for this round to 'in_progress' status
+      const { error } = await supabase
+        .from('draws')
+        .update({ status: 'in_progress' })
+        .eq('round_id', selectedRoundId);
+        
+      if (error) throw error;
+      
+      setIsAccepted(true);
+      toast.success('Draws accepted and published!');
+      
+      // Refresh the draws
+      if (props.onGenerateDraws) {
+        await props.onGenerateDraws(selectedRoundId);
+      }
+    } catch (error) {
+      console.error('Error accepting draws:', error);
+      toast.error('Failed to accept draws');
+    }
+  };
+
   const selectedRound = props.rounds.find(r => r.id === selectedRoundId);
 
   if (props.rounds.length === 0) {
@@ -213,7 +254,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5" />
-            Draw Generation
+            British Parliamentary Draw Generation
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -273,7 +314,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
           <div className="flex justify-between items-center text-sm text-gray-600">
             <span>
               Teams: {props.teams.length} | Judges: {props.judges.length} | 
-              Rooms: {Math.floor(props.teams.length / 2)}
+              Rooms: 3 (BP Format)
             </span>
             <Button onClick={exportAsImage} variant="outline" size="sm">
               Export as Image
@@ -289,7 +330,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
             <h3 className="text-xl font-semibold">
               {props.tournamentName} - {selectedRound ? `Round ${selectedRound.round_number}` : props.roundName}
             </h3>
-            {!props.publicMode && (
+            {!props.publicMode && !isAccepted && (
               <Button onClick={handleGenerateDraws} variant="outline" size="sm">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Regenerate
@@ -310,6 +351,21 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
               </div>
             </SortableContext>
           </DndContext>
+          
+          {!props.publicMode && !isAccepted && (
+            <div className="flex gap-4 mt-6">
+              <Button onClick={handleAcceptDraws} className="bg-green-600 hover:bg-green-700">
+                <CheckCircle className="mr-2 h-4 w-4" /> Accept Draws
+              </Button>
+              <Button onClick={handleGenerateDraws} variant="outline">
+                <Shuffle className="mr-2 h-4 w-4" /> Regenerate
+              </Button>
+            </div>
+          )}
+          
+          {isAccepted && (
+            <div className="mt-4 text-green-700 font-semibold">Draws have been accepted and are now public.</div>
+          )}
         </div>
       ) : (
         <Card>
@@ -317,7 +373,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
             <Users className="h-16 w-16 text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-700 mb-2">No Draws Generated</h3>
             <p className="text-gray-500 mb-4 text-center">
-              {selectedRound ? `Generate draws for Round ${selectedRound.round_number}` : 'Select a round and generate draws'}
+              {selectedRound ? `Generate British Parliamentary draws for Round ${selectedRound.round_number}` : 'Select a round and generate draws'}
             </p>
           </CardContent>
         </Card>
@@ -326,7 +382,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
   );
 }
 
-// Sortable Draw Card Component
+// Sortable Draw Card Component for British Parliamentary Format
 function SortableDrawCard({ draw }: { draw: EnhancedDraw }) {
   return (
     <Card className="border-2 border-blue-200 shadow-md hover:shadow-lg transition-shadow">
@@ -356,14 +412,24 @@ function SortableDrawCard({ draw }: { draw: EnhancedDraw }) {
       <CardContent className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-green-600 uppercase">Government</div>
+            <div className="text-xs font-medium text-green-600 uppercase">Opening Gov</div>
             <div className="font-medium">{draw.gov_team?.name || 'TBD'}</div>
             <div className="text-xs text-gray-500">{draw.gov_team?.institution}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs font-medium text-red-600 uppercase">Opposition</div>
+            <div className="text-xs font-medium text-red-600 uppercase">Opening Opp</div>
             <div className="font-medium">{draw.opp_team?.name || 'TBD'}</div>
             <div className="text-xs text-gray-500">{draw.opp_team?.institution}</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-blue-600 uppercase">Closing Gov</div>
+            <div className="font-medium">{draw.cg_team?.name || 'Swing Team A'}</div>
+            <div className="text-xs text-gray-500">{draw.cg_team?.institution || 'Swing'}</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-purple-600 uppercase">Closing Opp</div>
+            <div className="font-medium">{draw.co_team?.name || 'Swing Team B'}</div>
+            <div className="text-xs text-gray-500">{draw.co_team?.institution || 'Swing'}</div>
           </div>
         </div>
         

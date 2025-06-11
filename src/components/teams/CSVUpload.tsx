@@ -30,80 +30,99 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis`;
   };
 
   const parseCSV = (text: string): any[] => {
+    console.log("Parsing CSV:", text);
     const lines = text.split('\n').filter(line => line.trim());
-    if (lines.length < 2) return [];
+    if (lines.length < 2) {
+      console.error("Not enough lines in CSV");
+      return [];
+    }
 
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    console.log("Headers:", headers);
     
-    // Check if all required headers are present
-    const requiredHeaders = ['team_name', 'institution', 'speaker_1', 'speaker_2'];
-    const missingHeaders = [];
+    // Map headers to standardized field names
+    const headerMap: Record<string, string> = {};
     
-    for (const required of requiredHeaders) {
-      // Check for exact match or partial match (e.g., "team name" for "team_name")
-      const found = headers.some(h => 
-        h === required || 
-        h === required.replace('_', ' ') || 
-        h === required.replace('_', '')
-      );
-      
-      if (!found) {
-        missingHeaders.push(required);
-      }
-    }
+    // Look for team name column
+    const teamNameIndex = headers.findIndex(h => 
+      h === 'team_name' || h === 'team name' || h === 'teamname' || h === 'team'
+    );
+    if (teamNameIndex !== -1) headerMap[headers[teamNameIndex]] = 'name';
     
-    if (missingHeaders.length > 0) {
-      throw new Error(`Missing required columns: ${missingHeaders.join(', ')}`);
-    }
-
-    // Map header indices
-    const headerIndices: Record<string, number> = {};
-    for (const required of requiredHeaders) {
-      const index = headers.findIndex(h => 
-        h === required || 
-        h === required.replace('_', ' ') || 
-        h === required.replace('_', '')
-      );
-      
-      if (index !== -1) {
-        headerIndices[required] = index;
-      }
+    // Look for institution column
+    const institutionIndex = headers.findIndex(h => 
+      h === 'institution' || h === 'school' || h === 'university' || h === 'org'
+    );
+    if (institutionIndex !== -1) headerMap[headers[institutionIndex]] = 'institution';
+    
+    // Look for speaker 1 column
+    const speaker1Index = headers.findIndex(h => 
+      h === 'speaker_1' || h === 'speaker 1' || h === 'speaker1' || h === 'first speaker'
+    );
+    if (speaker1Index !== -1) headerMap[headers[speaker1Index]] = 'speaker_1';
+    
+    // Look for speaker 2 column
+    const speaker2Index = headers.findIndex(h => 
+      h === 'speaker_2' || h === 'speaker 2' || h === 'speaker2' || h === 'second speaker'
+    );
+    if (speaker2Index !== -1) headerMap[headers[speaker2Index]] = 'speaker_2';
+    
+    console.log("Header mapping:", headerMap);
+    
+    // Check if we have the minimum required headers
+    if (!headerMap['name']) {
+      throw new Error('Missing required column: team name');
     }
 
     const teams: any[] = [];
     const errors: string[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-      // Handle quoted values properly
+      // Handle CSV parsing with quotes and commas
+      let row = lines[i];
       let values: string[] = [];
       let currentValue = '';
       let inQuotes = false;
       
-      // Split by commas, but respect quotes
-      for (let char of lines[i]) {
+      for (let j = 0; j < row.length; j++) {
+        const char = row[j];
+        
         if (char === '"') {
           inQuotes = !inQuotes;
         } else if (char === ',' && !inQuotes) {
-          values.push(currentValue.trim());
+          values.push(currentValue);
           currentValue = '';
         } else {
           currentValue += char;
         }
       }
-      values.push(currentValue.trim()); // Add the last value
       
-      if (values.length < Object.keys(headerIndices).length) {
-        errors.push(`Row ${i + 1}: Insufficient data`);
-        continue;
-      }
-
-      const team = {
-        name: values[headerIndices['team_name']] || '',
-        institution: values[headerIndices['institution']] || '',
-        speaker_1: values[headerIndices['speaker_1']] || '',
-        speaker_2: values[headerIndices['speaker_2']] || ''
+      // Add the last value
+      values.push(currentValue);
+      
+      // Trim all values
+      values = values.map(v => v.trim());
+      
+      console.log(`Row ${i} values:`, values);
+      
+      // Create team object using the header mapping
+      const team: Record<string, string> = {
+        name: '',
+        institution: '',
+        speaker_1: '',
+        speaker_2: ''
       };
-
+      
+      // Map values to the correct fields
+      headers.forEach((header, index) => {
+        if (headerMap[header] && index < values.length) {
+          team[headerMap[header]] = values[index];
+        }
+      });
+      
+      console.log(`Parsed team:`, team);
+      
+      // Validate team
       if (!team.name) {
         errors.push(`Row ${i + 1}: Team name is required`);
         continue;
