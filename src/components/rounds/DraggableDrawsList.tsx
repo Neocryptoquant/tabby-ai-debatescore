@@ -176,7 +176,7 @@ export function DraggableDrawsList({
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <CardTitle>Draws</CardTitle>
+        <CardTitle>British Parliamentary Draws</CardTitle>
         <div className="flex flex-wrap gap-2">
           {isTabMaster && (
             <Button
@@ -210,26 +210,41 @@ export function DraggableDrawsList({
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {draws.map((draw, idx) => (
-            <Card key={draw.room} className="border-2 border-blue-200 shadow-md">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div className="font-semibold text-blue-700">{draw.room}</div>
-                <Badge variant="outline">Room {idx + 1}</Badge>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="font-bold text-blue-600">OG</div>
-                  <div>{draw.gov_team?.name || '-'}</div>
-                  <div className="font-bold text-blue-600">OO</div>
-                  <div>{draw.opp_team?.name || '-'}</div>
-                  <div className="font-bold text-blue-600">CG</div>
-                  <div>-</div>
-                  <div className="font-bold text-blue-600">CO</div>
-                  <div>-</div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {draws.map((draw, idx) => {
+            // Find team data
+            const govTeam = teams.find(t => t.id === draw.gov_team_id);
+            const oppTeam = teams.find(t => t.id === draw.opp_team_id);
+            const cgTeam = draw.cg_team_id ? teams.find(t => t.id === draw.cg_team_id) : undefined;
+            const coTeam = draw.co_team_id ? teams.find(t => t.id === draw.co_team_id) : undefined;
+            const judge = draw.judge_id ? judges.find(j => j.id === draw.judge_id) : undefined;
+
+            return (
+              <Card key={draw.id} className="border-2 border-blue-200 shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div className="font-semibold text-blue-700">{draw.room}</div>
+                  <Badge variant="outline">Room {idx + 1}</Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="font-bold text-green-600">OG</div>
+                    <div>{govTeam?.name || '-'}</div>
+                    <div className="font-bold text-red-600">OO</div>
+                    <div>{oppTeam?.name || '-'}</div>
+                    <div className="font-bold text-blue-600">CG</div>
+                    <div>{cgTeam?.name || '-'}</div>
+                    <div className="font-bold text-purple-600">CO</div>
+                    <div>{coTeam?.name || '-'}</div>
+                    {judge && (
+                      <>
+                        <div className="font-bold text-gray-600">Judge</div>
+                        <div>{judge.name}</div>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
       {isTabMaster && !isAccepted && (
@@ -247,4 +262,4 @@ export function DraggableDrawsList({
       )}
     </div>
   );
-} 
+}

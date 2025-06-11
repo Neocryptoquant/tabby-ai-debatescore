@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -193,9 +192,9 @@ const TournamentDetail = () => {
       return;
     }
 
-    if (teams.length < 2) {
+    if (teams.length < 4) {
       console.error('Not enough teams:', teams.length);
-      toast.error('Need at least 2 teams to generate draws');
+      toast.error('Need at least 4 teams to generate British Parliamentary draws');
       return;
     }
 
@@ -209,15 +208,15 @@ const TournamentDetail = () => {
         throw new Error('Round not found');
       }
 
-      // Generate rooms based on number of teams
-      const numRooms = Math.ceil(teams.length / 4);
+      // Generate rooms based on number of teams (BP format: 4 teams per room)
+      const numRooms = Math.floor(teams.length / 4);
       const rooms = Array.from({ length: numRooms }, (_, i) => `Room ${i + 1}`);
 
       // Use the enhanced draw generation
       await generateDrawsWithHistory(roundId, teams, rooms);
       
       toast.dismiss();
-      toast.success('Draws generated successfully!');
+      toast.success('British Parliamentary draws generated successfully!');
       
       // Refetch draws to update the UI
       setTimeout(() => {
@@ -330,7 +329,7 @@ const TournamentDetail = () => {
   const tournamentCardData: TournamentCardData = {
     id: tournament.id,
     name: tournament.name,
-    format: tournament.format?.toUpperCase() || "TBD",
+    format: tournament.format?.toUpperCase() || "BP",
     date: tournament.start_date ? new Date(tournament.start_date).toLocaleDateString() : "TBD",
     teamCount: teams.length,
     location: tournament.location || "TBD",
@@ -352,6 +351,11 @@ const TournamentDetail = () => {
       title: "Rounds",
       value: rounds?.length || 0,
       description: "Total rounds"
+    },
+    {
+      title: "BP Rooms",
+      value: Math.floor((teams?.length || 0) / 4),
+      description: "British Parliamentary rooms"
     }
   ];
 
@@ -359,7 +363,7 @@ const TournamentDetail = () => {
     <MainLayout>
       <PageHeader
         title={tournament.name}
-        description={tournament.description || "Tournament management"}
+        description={tournament.description || "British Parliamentary Tournament"}
         actions={
           canEdit ? (
             <div className="flex gap-2">
@@ -540,7 +544,7 @@ const TournamentDetail = () => {
               roundId={rounds[0]?.id}
               teams={teams}
               judges={judges}
-              rooms={['Room 1', 'Room 2', 'Room 3', 'Room 4']}
+              rooms={Array.from({ length: Math.floor(teams.length / 4) }, (_, i) => `Room ${i + 1}`)}
               draws={draws}
               rounds={rounds}
               onStartRound={handleStartRound}

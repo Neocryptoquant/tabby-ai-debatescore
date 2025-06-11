@@ -1,5 +1,4 @@
 
-
 import { Team, Judge, Draw } from "@/types/tournament";
 
 interface DrawRoom {
@@ -8,8 +7,8 @@ interface DrawRoom {
   teams: {
     OG: Team;
     OO: Team;
-    CG?: Team;
-    CO?: Team;
+    CG: Team;
+    CO: Team;
   };
   judge?: Judge;
 }
@@ -76,12 +75,6 @@ export class EnhancedDrawGenerator {
       }
     }
 
-    // Check if this pairing has been used before
-    const pairingKey = teams.map(t => t.id).sort().join('-');
-    if (this.usedPairings.has(pairingKey)) {
-      score += 50; // Penalty for repeated pairings
-    }
-
     return score;
   }
 
@@ -94,22 +87,23 @@ export class EnhancedDrawGenerator {
     return this.judges[judgeIndex];
   }
 
-  // Generate draws using the specified method
+  // Generate draws using the specified method - British Parliamentary format (4 teams per room)
   public generateDraws(): DrawRoom[] {
-    if (this.teams.length < 2) {
-      throw new Error('Need at least 2 teams to generate draws');
+    if (this.teams.length < 4) {
+      throw new Error('Need at least 4 teams to generate British Parliamentary draws');
     }
 
     const draws: DrawRoom[] = [];
     const shuffledTeams = this.shuffleArray(this.teams);
-    const maxRooms = Math.floor(shuffledTeams.length / 2); // 2 teams per room minimum
-    const numRooms = Math.min(maxRooms, this.rooms.length);
+    const numRooms = Math.floor(shuffledTeams.length / 4); // BP format: 4 teams per room
+
+    console.log(`Generating BP draws: ${this.teams.length} teams, ${numRooms} rooms`);
 
     // Generate draws for each room
     for (let roomIndex = 0; roomIndex < numRooms; roomIndex++) {
-      const roomTeams = shuffledTeams.slice(roomIndex * 2, (roomIndex + 1) * 2);
+      const roomTeams = shuffledTeams.slice(roomIndex * 4, (roomIndex + 1) * 4);
       
-      if (roomTeams.length >= 2) {
+      if (roomTeams.length === 4) {
         // Optimize team arrangement to minimize institution clashes
         const optimizedTeams = this.optimizeTeamArrangement(roomTeams);
         
@@ -117,10 +111,10 @@ export class EnhancedDrawGenerator {
           id: `room-${roomIndex + 1}`,
           room: this.rooms[roomIndex] || `Room ${roomIndex + 1}`,
           teams: {
-            OG: optimizedTeams[0],
-            OO: optimizedTeams[1],
-            CG: optimizedTeams[2], // Optional for 4-team format
-            CO: optimizedTeams[3]  // Optional for 4-team format
+            OG: optimizedTeams[0], // Opening Government
+            OO: optimizedTeams[1], // Opening Opposition  
+            CG: optimizedTeams[2], // Closing Government
+            CO: optimizedTeams[3]  // Closing Opposition
           },
           judge: this.allocateJudge(roomIndex)
         };
@@ -128,22 +122,23 @@ export class EnhancedDrawGenerator {
         draws.push(drawRoom);
 
         // Track this pairing
-        const pairingKey = optimizedTeams.slice(0, 2).map(t => t.id).sort().join('-');
+        const pairingKey = optimizedTeams.map(t => t.id).sort().join('-');
         this.usedPairings.add(pairingKey);
       }
     }
 
+    console.log(`Generated ${draws.length} BP rooms`);
     return draws;
   }
 
   // Optimize team arrangement within a room
   private optimizeTeamArrangement(teams: Team[]): Team[] {
-    if (teams.length < 2) return teams;
+    if (teams.length < 4) return teams;
 
     let bestArrangement = teams;
     let bestScore = this.calculateCompatibilityScore(teams);
 
-    // Try different arrangements (permutations)
+    // Try different arrangements (simple swaps to avoid institution clashes)
     const arrangements = this.generateArrangements(teams);
     
     for (const arrangement of arrangements) {
@@ -176,15 +171,18 @@ export class EnhancedDrawGenerator {
     return arrangements;
   }
 
-  // Convert DrawRoom to database format
+  // Convert DrawRoom to database format for British Parliamentary
   public convertToDraws(drawRooms: DrawRoom[], roundId: string, tournamentId: string): Omit<Draw, 'id' | 'created_at' | 'updated_at'>[] {
     return drawRooms.map(room => ({
       round_id: roundId,
       tournament_id: tournamentId,
       room: room.room,
-      gov_team_id: room.teams.OG.id,
-      opp_team_id: room.teams.OO.id,
+      gov_team_id: room.teams.OG.id,    // Opening Government
+      opp_team_id: room.teams.OO.id,    // Opening Opposition
+      cg_team_id: room.teams.CG.id,     // Closing Government  
+      co_team_id: room.teams.CO.id,     // Closing Opposition
       judge_id: room.judge?.id,
+      judge: room.judge?.name,
       status: 'pending' as const
     }));
   }
@@ -196,4 +194,3 @@ export class EnhancedDrawGenerator {
     return this.generateDraws();
   }
 }
-

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import {
   DndContext,
@@ -63,9 +62,9 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
       ...draw,
       gov_team: props.teams.find(t => t.id === draw.gov_team_id),
       opp_team: props.teams.find(t => t.id === draw.opp_team_id),
-      cg_team: props.teams.find(t => t.id === draw.cg_team_id),
-      co_team: props.teams.find(t => t.id === draw.co_team_id),
-      judge: draw.judge_id ? props.judges.find(j => j.id === draw.judge_id) : undefined
+      cg_team: draw.cg_team_id ? props.teams.find(t => t.id === draw.cg_team_id) : undefined,
+      co_team: draw.co_team_id ? props.teams.find(t => t.id === draw.co_team_id) : undefined,
+      judge_obj: draw.judge_id ? props.judges.find(j => j.id === draw.judge_id) : undefined
     }));
     setDraws(enhancedDraws);
   }, [props.draws, props.teams, props.judges, selectedRoundId]);
@@ -106,14 +105,17 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
       const drawRooms = generator.generateDraws();
       const newDraws = generator.convertToDraws(drawRooms, selectedRoundId, props.tournamentId);
 
-      // Insert new draws with proper type conversion
+      // Insert new draws with proper database format
       const drawsForDatabase = newDraws.map(draw => ({
         round_id: draw.round_id,
         tournament_id: draw.tournament_id,
         room: draw.room,
         gov_team_id: draw.gov_team_id,
         opp_team_id: draw.opp_team_id,
+        cg_team_id: draw.cg_team_id,
+        co_team_id: draw.co_team_id,
         judge_id: draw.judge_id,
+        judge: draw.judge,
         status: draw.status
       }));
 
@@ -124,7 +126,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
 
       if (error) throw error;
 
-      toast.success(`Generated ${drawRooms.length} draws successfully!`);
+      toast.success(`Generated ${drawRooms.length} British Parliamentary draws successfully!`);
       
       // Refresh the draws
       if (props.onGenerateDraws) {
@@ -212,7 +214,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5" />
-            Enhanced Draw Generation
+            British Parliamentary Draw Generation
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -272,7 +274,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
           <div className="flex justify-between items-center text-sm text-gray-600">
             <span>
               Teams: {props.teams.length} | Judges: {props.judges.length} | 
-              Rooms: {Math.floor(props.teams.length / 4)}
+              Rooms: {Math.floor(props.teams.length / 4)} (BP Format)
             </span>
             <Button onClick={exportAsImage} variant="outline" size="sm">
               Export as Image
@@ -316,7 +318,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
             <Users className="h-16 w-16 text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-700 mb-2">No Draws Generated</h3>
             <p className="text-gray-500 mb-4 text-center">
-              {selectedRound ? `Generate draws for Round ${selectedRound.round_number}` : 'Select a round and generate draws'}
+              {selectedRound ? `Generate British Parliamentary draws for Round ${selectedRound.round_number}` : 'Select a round and generate draws'}
             </p>
           </CardContent>
         </Card>
@@ -325,7 +327,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
   );
 }
 
-// Sortable Draw Card Component
+// Sortable Draw Card Component for British Parliamentary Format
 function SortableDrawCard({ draw }: { draw: EnhancedDraw }) {
   return (
     <Card className="border-2 border-blue-200 shadow-md hover:shadow-lg transition-shadow">
@@ -355,24 +357,34 @@ function SortableDrawCard({ draw }: { draw: EnhancedDraw }) {
       <CardContent className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-blue-600 uppercase">Government</div>
+            <div className="text-xs font-medium text-green-600 uppercase">Opening Gov</div>
             <div className="font-medium">{draw.gov_team?.name || 'TBD'}</div>
             <div className="text-xs text-gray-500">{draw.gov_team?.institution}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs font-medium text-red-600 uppercase">Opposition</div>
+            <div className="text-xs font-medium text-red-600 uppercase">Opening Opp</div>
             <div className="font-medium">{draw.opp_team?.name || 'TBD'}</div>
             <div className="text-xs text-gray-500">{draw.opp_team?.institution}</div>
           </div>
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-blue-600 uppercase">Closing Gov</div>
+            <div className="font-medium">{draw.cg_team?.name || 'TBD'}</div>
+            <div className="text-xs text-gray-500">{draw.cg_team?.institution}</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-purple-600 uppercase">Closing Opp</div>
+            <div className="font-medium">{draw.co_team?.name || 'TBD'}</div>
+            <div className="text-xs text-gray-500">{draw.co_team?.institution}</div>
+          </div>
         </div>
         
-        {draw.judge && (
+        {draw.judge_obj && (
           <div className="border-t pt-3">
             <div className="flex items-center gap-2">
               <Gavel className="h-4 w-4 text-gray-500" />
               <div>
-                <div className="font-medium">{draw.judge.name}</div>
-                <div className="text-xs text-gray-500">{draw.judge.institution}</div>
+                <div className="font-medium">{draw.judge_obj.name}</div>
+                <div className="text-xs text-gray-500">{draw.judge_obj.institution}</div>
               </div>
             </div>
           </div>

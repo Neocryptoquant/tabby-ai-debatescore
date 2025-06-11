@@ -1,5 +1,4 @@
 
-
 /**
  * Tournament-related type definitions
  */
@@ -57,7 +56,10 @@ export interface Draw {
   room: string;
   gov_team_id: string;
   opp_team_id: string;
+  cg_team_id?: string;
+  co_team_id?: string;
   judge_id?: string;
+  judge?: string;
   status: 'pending' | 'in_progress' | 'completed';
   created_at: string;
   updated_at: string;
@@ -69,7 +71,7 @@ export interface EnhancedDraw extends Draw {
   opp_team?: Team;
   cg_team?: Team;
   co_team?: Team;
-  judge?: Judge;
+  judge_obj?: Judge;
 }
 
 export type ExperienceLevel = 'novice' | 'intermediate' | 'open' | 'pro';
@@ -105,4 +107,3 @@ export interface JudgeFormData {
   institution?: string;
   experience_level: ExperienceLevel;
 }
-
