@@ -22,7 +22,6 @@ import { Users, Trophy, Shuffle, Play, CheckCircle, Clock, RefreshCw, Gavel } fr
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Team, Draw, Round, Judge, EnhancedDraw } from '@/types/tournament';
-import { EnhancedDrawGenerator } from '@/services/enhancedDrawGenerator';
 import { supabase } from '@/integrations/supabase/client';
 import html2canvas from 'html2canvas';
 
@@ -58,14 +57,19 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
   // Update local draws when props change
   useEffect(() => {
     const roundDraws = props.draws.filter(draw => draw.round_id === selectedRoundId);
-    const enhancedDraws: EnhancedDraw[] = roundDraws.map(draw => ({
-      ...draw,
-      gov_team: props.teams.find(t => t.id === draw.gov_team_id),
-      opp_team: props.teams.find(t => t.id === draw.opp_team_id),
-      cg_team: draw.cg_team_id ? props.teams.find(t => t.id === draw.cg_team_id) : undefined,
-      co_team: draw.co_team_id ? props.teams.find(t => t.id === draw.co_team_id) : undefined,
-      judge_obj: draw.judge_id ? props.judges.find(j => j.id === draw.judge_id) : undefined
-    }));
+    const enhancedDraws: EnhancedDraw[] = roundDraws.map(draw => {
+      // Find the teams by ID
+      const govTeam = props.teams.find(t => t.id === draw.gov_team_id);
+      const oppTeam = props.teams.find(t => t.id === draw.opp_team_id);
+      const judgeObj = draw.judge_id ? props.judges.find(j => j.id === draw.judge_id) : undefined;
+      
+      return {
+        ...draw,
+        gov_team: govTeam,
+        opp_team: oppTeam,
+        judge_obj: judgeObj
+      };
+    });
     setDraws(enhancedDraws);
   }, [props.draws, props.teams, props.judges, selectedRoundId]);
 
@@ -75,8 +79,8 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
       return;
     }
 
-    if (props.teams.length < 4) {
-      toast.error('Need at least 4 teams to generate British Parliamentary draws');
+    if (props.teams.length < 2) {
+      toast.error('Need at least 2 teams to generate draws');
       return;
     }
 
@@ -90,43 +94,38 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
 
       if (deleteError) throw deleteError;
 
-      // Generate new draws using enhanced generator
-      const generator = new EnhancedDrawGenerator(
-        props.teams,
-        props.judges,
-        props.rooms,
-        {
-          method: generationMethod,
-          avoidInstitutionClashes: true,
-          balanceExperience: true
+      // Generate new draws
+      const drawsToInsert = [];
+      const shuffledTeams = [...props.teams].sort(() => Math.random() - 0.5);
+      const numRooms = Math.floor(shuffledTeams.length / 2);
+      
+      for (let i = 0; i < numRooms; i++) {
+        if (i*2+1 < shuffledTeams.length) {
+          const govTeam = shuffledTeams[i*2];
+          const oppTeam = shuffledTeams[i*2+1];
+          
+          drawsToInsert.push({
+            round_id: selectedRoundId,
+            tournament_id: props.tournamentId,
+            room: props.rooms[i] || `Room ${i+1}`,
+            gov_team_id: govTeam.id,
+            opp_team_id: oppTeam.id,
+            judge_id: props.judges[i % props.judges.length]?.id || null,
+            judge: props.judges[i % props.judges.length]?.name || null,
+            status: 'pending'
+          });
         }
-      );
+      }
 
-      const drawRooms = generator.generateDraws();
-      const newDraws = generator.convertToDraws(drawRooms, selectedRoundId, props.tournamentId);
-
-      // Insert new draws with proper database format
-      const drawsForDatabase = newDraws.map(draw => ({
-        round_id: draw.round_id,
-        tournament_id: draw.tournament_id,
-        room: draw.room,
-        gov_team_id: draw.gov_team_id,
-        opp_team_id: draw.opp_team_id,
-        cg_team_id: draw.cg_team_id,
-        co_team_id: draw.co_team_id,
-        judge_id: draw.judge_id,
-        judge: draw.judge,
-        status: draw.status
-      }));
-
+      // Insert new draws
       const { data, error } = await supabase
         .from('draws')
-        .insert(drawsForDatabase)
+        .insert(drawsToInsert)
         .select();
 
       if (error) throw error;
 
-      toast.success(`Generated ${drawRooms.length} British Parliamentary draws successfully!`);
+      toast.success(`Generated ${drawsToInsert.length} draws successfully!`);
       
       // Refresh the draws
       if (props.onGenerateDraws) {
@@ -214,7 +213,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5" />
-            British Parliamentary Draw Generation
+            Draw Generation
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -274,7 +273,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
           <div className="flex justify-between items-center text-sm text-gray-600">
             <span>
               Teams: {props.teams.length} | Judges: {props.judges.length} | 
-              Rooms: {Math.floor(props.teams.length / 4)} (BP Format)
+              Rooms: {Math.floor(props.teams.length / 2)}
             </span>
             <Button onClick={exportAsImage} variant="outline" size="sm">
               Export as Image
@@ -318,7 +317,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
             <Users className="h-16 w-16 text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-700 mb-2">No Draws Generated</h3>
             <p className="text-gray-500 mb-4 text-center">
-              {selectedRound ? `Generate British Parliamentary draws for Round ${selectedRound.round_number}` : 'Select a round and generate draws'}
+              {selectedRound ? `Generate draws for Round ${selectedRound.round_number}` : 'Select a round and generate draws'}
             </p>
           </CardContent>
         </Card>
@@ -327,7 +326,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
   );
 }
 
-// Sortable Draw Card Component for British Parliamentary Format
+// Sortable Draw Card Component
 function SortableDrawCard({ draw }: { draw: EnhancedDraw }) {
   return (
     <Card className="border-2 border-blue-200 shadow-md hover:shadow-lg transition-shadow">
@@ -357,24 +356,14 @@ function SortableDrawCard({ draw }: { draw: EnhancedDraw }) {
       <CardContent className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-green-600 uppercase">Opening Gov</div>
+            <div className="text-xs font-medium text-green-600 uppercase">Government</div>
             <div className="font-medium">{draw.gov_team?.name || 'TBD'}</div>
             <div className="text-xs text-gray-500">{draw.gov_team?.institution}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs font-medium text-red-600 uppercase">Opening Opp</div>
+            <div className="text-xs font-medium text-red-600 uppercase">Opposition</div>
             <div className="font-medium">{draw.opp_team?.name || 'TBD'}</div>
             <div className="text-xs text-gray-500">{draw.opp_team?.institution}</div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-blue-600 uppercase">Closing Gov</div>
-            <div className="font-medium">{draw.cg_team?.name || 'TBD'}</div>
-            <div className="text-xs text-gray-500">{draw.cg_team?.institution}</div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-purple-600 uppercase">Closing Opp</div>
-            <div className="font-medium">{draw.co_team?.name || 'TBD'}</div>
-            <div className="text-xs text-gray-500">{draw.co_team?.institution}</div>
           </div>
         </div>
         

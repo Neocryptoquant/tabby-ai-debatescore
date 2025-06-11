@@ -88,17 +88,33 @@ export const TeamsTabContainer = ({ tournamentId }: TeamsTabContainerProps) => {
     setIsSaving(true);
     let successCount = 0;
     let errorCount = 0;
+    
+    console.log("Teams to upload:", teams);
+    
     for (const team of teams) {
       try {
-        await addTeam(team);
+        await addTeam({
+          name: team.name,
+          institution: team.institution || '',
+          speaker_1: team.speaker_1 || '',
+          speaker_2: team.speaker_2 || ''
+        });
         successCount++;
       } catch (error) {
+        console.error('Error adding team:', error);
         errorCount++;
       }
     }
+    
     setIsSaving(false);
     setIsCSVModalOpen(false);
-    toast.success(`Imported ${successCount} teams${errorCount ? ", " + errorCount + " failed" : ""}`);
+    
+    if (successCount > 0) {
+      toast.success(`Imported ${successCount} teams${errorCount ? ", " + errorCount + " failed" : ""}`);
+      refetch(); // Refresh the teams list
+    } else if (errorCount > 0) {
+      toast.error(`Failed to import ${errorCount} teams`);
+    }
   };
 
   const generateTeamStats = () => {

@@ -1,7 +1,5 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { generateBPDraws } from '@/services/bpDrawGenerator';
 import { Round, Team, Judge, Draw } from '@/types/tournament';
 import { toast } from 'sonner';
 
@@ -44,13 +42,6 @@ export const useEnhancedDrawsOperations = (
     setIsGenerating(true);
     
     try {
-      // Generate British Parliamentary draws
-      const newDraws = generateBPDraws(roundId, teamsToUse, judges, rooms);
-      
-      if (newDraws.length === 0) {
-        throw new Error('No draws could be generated');
-      }
-
       // Clear existing draws for this round
       const { error: deleteError } = await supabase
         .from('draws')
@@ -59,12 +50,36 @@ export const useEnhancedDrawsOperations = (
 
       if (deleteError) throw deleteError;
 
-      // Insert new draws
-      const { error: insertError } = await supabase
-        .from('draws')
-        .insert(newDraws);
+      // Generate new draws
+      const drawsToInsert = [];
+      const shuffledTeams = [...teamsToUse].sort(() => Math.random() - 0.5);
+      const numRooms = Math.floor(shuffledTeams.length / 2);
+      
+      for (let i = 0; i < numRooms; i++) {
+        if (i*2+1 < shuffledTeams.length) {
+          const govTeam = shuffledTeams[i*2];
+          const oppTeam = shuffledTeams[i*2+1];
+          
+          drawsToInsert.push({
+            round_id: roundId,
+            tournament_id: tournamentId,
+            room: rooms[i] || `Room ${i+1}`,
+            gov_team_id: govTeam.id,
+            opp_team_id: oppTeam.id,
+            judge_id: judges[i % judges.length]?.id || null,
+            judge: judges[i % judges.length]?.name || null,
+            status: 'pending'
+          });
+        }
+      }
 
-      if (insertError) throw insertError;
+      // Insert new draws
+      const { data, error } = await supabase
+        .from('draws')
+        .insert(drawsToInsert)
+        .select();
+
+      if (error) throw error;
 
       // Create generation history record
       const { error: historyError } = await supabase
@@ -72,7 +87,7 @@ export const useEnhancedDrawsOperations = (
         .insert({
           tournament_id: tournamentId,
           round_id: roundId,
-          generation_method: 'british_parliamentary',
+          generation_method: 'standard',
           generation_params: {
             teams_count: teamsToUse.length,
             rooms_count: rooms.length,
@@ -90,7 +105,8 @@ export const useEnhancedDrawsOperations = (
         refetchDraws();
       }
 
-      toast.success(`Generated ${newDraws.length} British Parliamentary draws successfully!`);
+      toast.success(`Generated ${drawsToInsert.length} draws successfully!`);
+      return data;
     } catch (error) {
       console.error('Error generating draws:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate draws');
