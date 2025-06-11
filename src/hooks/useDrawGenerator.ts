@@ -1,4 +1,5 @@
 
+
 import { useState, useCallback } from 'react';
 import { Team, Draw, Judge } from '@/types/tournament';
 import { supabase } from '@/integrations/supabase/client';
@@ -98,9 +99,20 @@ export function useDrawGenerator({ tournamentId, roundId, teams, judges, rooms }
 
       console.log('Inserting draws:', drawsToInsert);
 
+      // Convert to proper database format (only include fields that exist in database)
+      const drawsForDatabase = drawsToInsert.map(draw => ({
+        round_id: draw.round_id,
+        tournament_id: draw.tournament_id,
+        room: draw.room,
+        gov_team_id: draw.gov_team_id,
+        opp_team_id: draw.opp_team_id,
+        judge_id: draw.judge_id,
+        status: draw.status
+      }));
+
       const { data, error } = await supabase
         .from('draws')
-        .insert(drawsToInsert)
+        .insert(drawsForDatabase)
         .select();
 
       if (error) {
@@ -148,3 +160,4 @@ export function useDrawGenerator({ tournamentId, roundId, teams, judges, rooms }
     generationHistory
   };
 }
+

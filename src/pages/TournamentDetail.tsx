@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -509,7 +510,7 @@ const TournamentDetail = () => {
                     defaultValues={{
                       name: editJudge.name,
                       institution: editJudge.institution,
-                      experience_level: editJudge.experience_level as any
+                      experience_level: editJudge.experience_level
                     }}
                     isEditMode
                   />

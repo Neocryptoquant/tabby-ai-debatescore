@@ -1,4 +1,5 @@
 
+
 import { Team, Judge, Draw } from "@/types/tournament";
 
 interface DrawRoom {
@@ -7,8 +8,8 @@ interface DrawRoom {
   teams: {
     OG: Team;
     OO: Team;
-    CG: Team;
-    CO: Team;
+    CG?: Team;
+    CO?: Team;
   };
   judge?: Judge;
 }
@@ -95,20 +96,20 @@ export class EnhancedDrawGenerator {
 
   // Generate draws using the specified method
   public generateDraws(): DrawRoom[] {
-    if (this.teams.length < 4) {
-      throw new Error('Need at least 4 teams to generate draws');
+    if (this.teams.length < 2) {
+      throw new Error('Need at least 2 teams to generate draws');
     }
 
     const draws: DrawRoom[] = [];
     const shuffledTeams = this.shuffleArray(this.teams);
-    const maxRooms = Math.floor(shuffledTeams.length / 4);
+    const maxRooms = Math.floor(shuffledTeams.length / 2); // 2 teams per room minimum
     const numRooms = Math.min(maxRooms, this.rooms.length);
 
     // Generate draws for each room
     for (let roomIndex = 0; roomIndex < numRooms; roomIndex++) {
-      const roomTeams = shuffledTeams.slice(roomIndex * 4, (roomIndex + 1) * 4);
+      const roomTeams = shuffledTeams.slice(roomIndex * 2, (roomIndex + 1) * 2);
       
-      if (roomTeams.length === 4) {
+      if (roomTeams.length >= 2) {
         // Optimize team arrangement to minimize institution clashes
         const optimizedTeams = this.optimizeTeamArrangement(roomTeams);
         
@@ -118,8 +119,8 @@ export class EnhancedDrawGenerator {
           teams: {
             OG: optimizedTeams[0],
             OO: optimizedTeams[1],
-            CG: optimizedTeams[2],
-            CO: optimizedTeams[3]
+            CG: optimizedTeams[2], // Optional for 4-team format
+            CO: optimizedTeams[3]  // Optional for 4-team format
           },
           judge: this.allocateJudge(roomIndex)
         };
@@ -127,7 +128,7 @@ export class EnhancedDrawGenerator {
         draws.push(drawRoom);
 
         // Track this pairing
-        const pairingKey = optimizedTeams.map(t => t.id).sort().join('-');
+        const pairingKey = optimizedTeams.slice(0, 2).map(t => t.id).sort().join('-');
         this.usedPairings.add(pairingKey);
       }
     }
@@ -137,7 +138,7 @@ export class EnhancedDrawGenerator {
 
   // Optimize team arrangement within a room
   private optimizeTeamArrangement(teams: Team[]): Team[] {
-    if (teams.length !== 4) return teams;
+    if (teams.length < 2) return teams;
 
     let bestArrangement = teams;
     let bestScore = this.calculateCompatibilityScore(teams);
@@ -195,3 +196,4 @@ export class EnhancedDrawGenerator {
     return this.generateDraws();
   }
 }
+

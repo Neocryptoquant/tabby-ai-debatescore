@@ -1,4 +1,5 @@
 
+
 /**
  * Tournament-related type definitions
  */
@@ -48,19 +49,22 @@ export interface Team {
   updated_at?: string;
 }
 
+// Database Draw interface (matches actual database schema)
 export interface Draw {
   id: string;
   round_id: string;
-  tournament_id: string;
+  tournament_id?: string;
   room: string;
   gov_team_id: string;
   opp_team_id: string;
-  cg_team_id?: string;
-  co_team_id?: string;
   judge_id?: string;
   status: 'pending' | 'in_progress' | 'completed';
   created_at: string;
   updated_at: string;
+}
+
+// Enhanced Draw interface for UI (includes populated relationships)
+export interface EnhancedDraw extends Draw {
   gov_team?: Team;
   opp_team?: Team;
   cg_team?: Team;
@@ -101,3 +105,4 @@ export interface JudgeFormData {
   institution?: string;
   experience_level: ExperienceLevel;
 }
+

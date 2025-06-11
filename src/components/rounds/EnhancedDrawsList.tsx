@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import {
   DndContext,
@@ -21,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users, Trophy, Shuffle, Play, CheckCircle, Clock, RefreshCw, Gavel } from "lucide-react";
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Team, Draw, Round, Judge } from '@/types/tournament';
+import { Team, Draw, Round, Judge, EnhancedDraw } from '@/types/tournament';
 import { EnhancedDrawGenerator } from '@/services/enhancedDrawGenerator';
 import { supabase } from '@/integrations/supabase/client';
 import html2canvas from 'html2canvas';
@@ -40,14 +41,6 @@ interface EnhancedDrawsListProps {
   roundName?: string;
   publicMode?: boolean;
   onGenerateDraws?: (roundId: string) => Promise<void>;
-}
-
-interface EnhancedDraw extends Draw {
-  gov_team?: Team;
-  opp_team?: Team;
-  cg_team?: Team;
-  co_team?: Team;
-  judge?: Judge;
 }
 
 export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
@@ -113,10 +106,20 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
       const drawRooms = generator.generateDraws();
       const newDraws = generator.convertToDraws(drawRooms, selectedRoundId, props.tournamentId);
 
-      // Insert new draws
+      // Insert new draws with proper type conversion
+      const drawsForDatabase = newDraws.map(draw => ({
+        round_id: draw.round_id,
+        tournament_id: draw.tournament_id,
+        room: draw.room,
+        gov_team_id: draw.gov_team_id,
+        opp_team_id: draw.opp_team_id,
+        judge_id: draw.judge_id,
+        status: draw.status
+      }));
+
       const { data, error } = await supabase
         .from('draws')
-        .insert(newDraws)
+        .insert(drawsForDatabase)
         .select();
 
       if (error) throw error;
@@ -352,24 +355,14 @@ function SortableDrawCard({ draw }: { draw: EnhancedDraw }) {
       <CardContent className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-blue-600 uppercase">Opening Government</div>
+            <div className="text-xs font-medium text-blue-600 uppercase">Government</div>
             <div className="font-medium">{draw.gov_team?.name || 'TBD'}</div>
             <div className="text-xs text-gray-500">{draw.gov_team?.institution}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs font-medium text-red-600 uppercase">Opening Opposition</div>
+            <div className="text-xs font-medium text-red-600 uppercase">Opposition</div>
             <div className="font-medium">{draw.opp_team?.name || 'TBD'}</div>
             <div className="text-xs text-gray-500">{draw.opp_team?.institution}</div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-green-600 uppercase">Closing Government</div>
-            <div className="font-medium">{draw.cg_team?.name || 'TBD'}</div>
-            <div className="text-xs text-gray-500">{draw.cg_team?.institution}</div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-purple-600 uppercase">Closing Opposition</div>
-            <div className="font-medium">{draw.co_team?.name || 'TBD'}</div>
-            <div className="text-xs text-gray-500">{draw.co_team?.institution}</div>
           </div>
         </div>
         
