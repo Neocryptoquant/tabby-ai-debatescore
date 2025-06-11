@@ -3,6 +3,7 @@ import { CreditCard, Zap, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSubscription } from '@/hooks/useSubscription';
+import { PremiumUpgradeModal } from './PremiumUpgradeModal';
 
 export const SubscriptionBanner = () => {
   const { subscription, tournamentCount, remainingTournaments, canCreateTournament, upgradeToPremium } = useSubscription();
@@ -41,10 +42,12 @@ export const SubscriptionBanner = () => {
                 </p>
               </div>
             </div>
-            <Button onClick={upgradeToPremium} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-              <Zap className="h-4 w-4 mr-2" />
-              Upgrade to Premium
-            </Button>
+            <PremiumUpgradeModal>
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                <Zap className="h-4 w-4 mr-2" />
+                Upgrade to Premium
+              </Button>
+            </PremiumUpgradeModal>
           </div>
         </CardContent>
       </Card>
@@ -64,10 +67,12 @@ export const SubscriptionBanner = () => {
               </p>
             </div>
           </div>
-          <Button variant="outline" onClick={upgradeToPremium} className="border-blue-300 text-blue-700 hover:bg-blue-50">
-            <Zap className="h-4 w-4 mr-2" />
-            Upgrade to Premium
-          </Button>
+          <PremiumUpgradeModal>
+            <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+              <Zap className="h-4 w-4 mr-2" />
+              Upgrade to Premium ($29/month)
+            </Button>
+          </PremiumUpgradeModal>
         </div>
       </CardContent>
     </Card>

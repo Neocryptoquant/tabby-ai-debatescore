@@ -9,6 +9,8 @@ export interface UserSubscription {
   user_id: string;
   subscription_type: 'free' | 'premium';
   tournaments_limit: number;
+  plan_name: string;
+  amount_cents: number;
   created_at: string;
   expires_at: string | null;
 }
@@ -47,6 +49,8 @@ export const useSubscription = () => {
           user_id: data.user_id,
           subscription_type: data.subscription_type as 'free' | 'premium',
           tournaments_limit: data.tournaments_limit,
+          plan_name: data.plan_name || 'Free',
+          amount_cents: data.amount_cents || 0,
           created_at: data.created_at,
           expires_at: data.expires_at
         });
@@ -88,6 +92,8 @@ export const useSubscription = () => {
           user_id: user.id,
           subscription_type: 'premium',
           tournaments_limit: 50,
+          plan_name: 'Premium Monthly',
+          amount_cents: 2900, // $29.00
           expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
         });
 
@@ -115,6 +121,32 @@ export const useSubscription = () => {
     return Math.max(0, limit - tournamentCount);
   };
 
+  const getPricingInfo = () => {
+    return {
+      free: {
+        name: 'Free Plan',
+        price: '$0/month',
+        tournaments: 3,
+        features: ['Basic team management', 'Standard draws', 'Community support']
+      },
+      premium: {
+        name: 'Premium Plan',
+        price: '$29/month',
+        tournaments: 50,
+        features: [
+          'Unlimited tournaments',
+          'Advanced BP draws',
+          'Institution clash avoidance', 
+          'Judge optimization',
+          'Real-time updates',
+          'CSV import/export',
+          'Public links',
+          'Priority support'
+        ]
+      }
+    };
+  };
+
   return {
     subscription,
     isLoading,
@@ -122,6 +154,7 @@ export const useSubscription = () => {
     canCreateTournament: canCreateTournament(),
     remainingTournaments: getRemainingTournaments(),
     upgradeToPremium,
+    getPricingInfo,
     refetch: () => {
       fetchSubscription();
       fetchTournamentCount();
