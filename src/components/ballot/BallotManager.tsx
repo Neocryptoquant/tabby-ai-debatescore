@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Judge, Round, Draw } from '@/types/tournament';
 import { JudgeBallotAccess } from './JudgeBallotAccess';
 import { BallotStatusTable } from './BallotStatusTable';
-import { Gavel, CheckCircle, AlertTriangle, Clock, RefreshCw } from 'lucide-react';
+import { Gavel, CheckCircle, AlertTriangle, Clock, RefreshCw, Trophy } from 'lucide-react';
 
 interface BallotManagerProps {
   tournamentId: string;
