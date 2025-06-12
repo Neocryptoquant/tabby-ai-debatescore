@@ -18,13 +18,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Trophy, Shuffle, Play, CheckCircle, Clock, RefreshCw, Gavel } from "lucide-react";
+import { Users, Trophy, Shuffle, Play, CheckCircle, Clock, RefreshCw, Gavel, Download, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Team, Draw, Round, Judge, EnhancedDraw } from '@/types/tournament';
 import { EnhancedDrawGenerator } from '@/services/enhancedDrawGenerator';
 import { supabase } from '@/integrations/supabase/client';
 import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface EnhancedDrawsListProps {
   tournamentId: string;
@@ -40,6 +41,7 @@ interface EnhancedDrawsListProps {
   roundName?: string;
   publicMode?: boolean;
   onGenerateDraws?: (roundId: string) => Promise<void>;
+  format?: string;
 }
 
 export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
@@ -48,6 +50,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
   const [draws, setDraws] = useState<EnhancedDraw[]>([]);
   const [generationMethod, setGenerationMethod] = useState<'random' | 'power_pairing' | 'swiss' | 'balanced'>('random');
   const [isAccepted, setIsAccepted] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState(props.format || 'bp');
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -60,7 +63,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
   useEffect(() => {
     const roundDraws = props.draws.filter(draw => draw.round_id === selectedRoundId);
     const enhancedDraws: EnhancedDraw[] = roundDraws.map(draw => {
-      // Map database columns to British Parliamentary positions correctly
+      // Map database columns to positions correctly based on format
       const ogTeam = props.teams.find(t => t.id === draw.gov_team_id);  // Opening Government
       const ooTeam = props.teams.find(t => t.id === draw.opp_team_id);  // Opening Opposition
       const cgTeam = draw.cg_team_id ? props.teams.find(t => t.id === draw.cg_team_id) : undefined;  // Closing Government
@@ -91,8 +94,19 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
       return;
     }
 
-    if (props.teams.length < 4) {
-      toast.error('Need at least 4 teams to generate British Parliamentary draws');
+    // Get the selected round to include motion in the draw
+    const selectedRound = props.rounds.find(r => r.id === selectedRoundId);
+    if (!selectedRound) {
+      toast.error('Round not found');
+      return;
+    }
+
+    // Validate team count based on format
+    const minTeamsRequired = selectedFormat === 'bp' ? 4 : 2;
+    const teamsPerRoom = selectedFormat === 'bp' ? 4 : 2;
+    
+    if (props.teams.length < minTeamsRequired) {
+      toast.error(`Need at least ${minTeamsRequired} teams to generate ${selectedFormat.toUpperCase()} draws`);
       return;
     }
 
@@ -106,11 +120,15 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
 
       if (deleteError) throw deleteError;
 
+      // Calculate number of rooms based on format
+      const roomCount = Math.floor(props.teams.length / teamsPerRoom);
+      const roomsToUse = props.rooms.slice(0, roomCount);
+      
       // Generate new draws using enhanced generator
       const generator = new EnhancedDrawGenerator(
         props.teams,
         props.judges,
-        props.rooms.slice(0, 3), // Limit to 3 rooms as specified
+        roomsToUse,
         {
           method: generationMethod,
           avoidInstitutionClashes: true,
@@ -120,16 +138,16 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
 
       const drawRooms = generator.generateDraws();
       
-      // Convert to database format with correct BP mapping
+      // Convert to database format with correct mapping
       const drawsForDatabase = drawRooms.map(room => ({
         round_id: selectedRoundId,
         tournament_id: props.tournamentId,
         room: room.room,
-        // Map British Parliamentary positions to database columns:
+        // Map positions to database columns:
         gov_team_id: room.teams.OG.id,    // Opening Government -> gov_team_id
         opp_team_id: room.teams.OO.id,    // Opening Opposition -> opp_team_id
-        cg_team_id: room.teams.CG.id,     // Closing Government -> cg_team_id
-        co_team_id: room.teams.CO.id,     // Closing Opposition -> co_team_id
+        cg_team_id: room.teams.CG?.id,    // Closing Government -> cg_team_id
+        co_team_id: room.teams.CO?.id,    // Closing Opposition -> co_team_id
         judge_id: room.judge?.id,
         judge: room.judge?.name,
         status: 'pending'
@@ -142,7 +160,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
 
       if (error) throw error;
 
-      toast.success(`Generated ${drawRooms.length} British Parliamentary draws successfully!`);
+      toast.success(`Generated ${drawRooms.length} ${selectedFormat.toUpperCase()} draws successfully!`);
       
       // Refresh the draws
       if (props.onGenerateDraws) {
@@ -204,10 +222,82 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
       link.download = `${props.tournamentName}_${props.roundName || 'draws'}.png`;
       link.href = canvas.toDataURL();
       link.click();
-      toast.success('Draws exported successfully!');
+      toast.success('Draws exported successfully as PNG!');
     } catch (error) {
       console.error('Error exporting draws:', error);
       toast.error('Failed to export draws');
+    }
+  };
+
+  const exportAsPDF = async () => {
+    const element = document.getElementById('draws-preview');
+    if (!element) return;
+
+    try {
+      toast.loading('Generating PDF...');
+      const canvas = await html2canvas(element);
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Get selected round for motion information
+      const selectedRound = props.rounds.find(r => r.id === selectedRoundId);
+      
+      // Add title
+      pdf.setFontSize(16);
+      pdf.text(`${props.tournamentName}`, 105, 15, { align: 'center' });
+      pdf.setFontSize(14);
+      pdf.text(`${selectedRound?.round_number ? `Round ${selectedRound.round_number}` : 'Draws'}`, 105, 22, { align: 'center' });
+      
+      // Add motion if available
+      if (selectedRound?.motion) {
+        pdf.setFontSize(12);
+        pdf.text('Motion:', 20, 32);
+        pdf.setFontSize(11);
+        
+        // Handle long motions by wrapping text
+        const splitMotion = pdf.splitTextToSize(selectedRound.motion, 170);
+        pdf.text(splitMotion, 20, 38);
+        
+        // Add info slide if available
+        let yPosition = 38 + (splitMotion.length * 6);
+        if (selectedRound.info_slide) {
+          pdf.setFontSize(12);
+          pdf.text('Info Slide:', 20, yPosition);
+          pdf.setFontSize(10);
+          
+          const splitInfoSlide = pdf.splitTextToSize(selectedRound.info_slide, 170);
+          pdf.text(splitInfoSlide, 20, yPosition + 6);
+          
+          yPosition += (splitInfoSlide.length * 5) + 10;
+        } else {
+          yPosition += 10;
+        }
+        
+        // Add draws image
+        const imgWidth = 170;
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        pdf.addImage(imgData, 'PNG', 20, yPosition, imgWidth, imgHeight);
+      } else {
+        // If no motion, just add the draws image
+        const imgWidth = 170;
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        pdf.addImage(imgData, 'PNG', 20, 30, imgWidth, imgHeight);
+      }
+      
+      // Save PDF
+      pdf.save(`${props.tournamentName}_${props.roundName || 'draws'}.pdf`);
+      toast.dismiss();
+      toast.success('Draws exported successfully as PDF!');
+    } catch (error) {
+      toast.dismiss();
+      console.error('Error exporting draws as PDF:', error);
+      toast.error('Failed to export draws as PDF');
     }
   };
 
@@ -248,6 +338,19 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
     );
   }
 
+  // Calculate rooms needed based on format and team count
+  const getFormatLabel = () => {
+    switch (selectedFormat) {
+      case 'bp': return 'British Parliamentary';
+      case 'wsdc': return 'World Schools';
+      case 'ap': return 'American Parliamentary';
+      default: return 'Debate';
+    }
+  };
+
+  const teamsPerRoom = selectedFormat === 'bp' ? 4 : 2;
+  const roomsNeeded = Math.floor(props.teams.length / teamsPerRoom);
+
   return (
     <div className="space-y-6">
       {/* Generation Controls */}
@@ -255,7 +358,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5" />
-            British Parliamentary Draw Generation
+            {getFormatLabel()} Draw Generation
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -269,7 +372,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
                 <SelectContent>
                   {props.rounds.map((round) => (
                     <SelectItem key={round.id} value={round.id}>
-                      Round {round.round_number} - {round.motion}
+                      Round {round.round_number} - {round.motion.substring(0, 30)}...
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -315,11 +418,18 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
           <div className="flex justify-between items-center text-sm text-gray-600">
             <span>
               Teams: {props.teams.length} | Judges: {props.judges.length} | 
-              Rooms: 3 (BP Format)
+              Rooms: {roomsNeeded} ({selectedFormat.toUpperCase()} Format)
             </span>
-            <Button onClick={exportAsImage} variant="outline" size="sm">
-              Export as Image
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={exportAsImage} variant="outline" size="sm">
+                <FileText className="h-4 w-4 mr-1" />
+                PNG
+              </Button>
+              <Button onClick={exportAsPDF} variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-1" />
+                PDF
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -339,6 +449,27 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
             )}
           </div>
 
+          {/* Motion and Info Slide */}
+          {selectedRound && (
+            <Card className="mb-4">
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-medium text-gray-700">Motion:</h4>
+                    <p className="text-gray-900">{selectedRound.motion}</p>
+                  </div>
+                  
+                  {selectedRound.info_slide && (
+                    <div>
+                      <h4 className="font-medium text-gray-700">Info Slide:</h4>
+                      <p className="text-gray-600 text-sm">{selectedRound.info_slide}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -347,7 +478,11 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
             <SortableContext items={draws.map(d => d.id)} strategy={verticalListSortingStrategy}>
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {draws.map((draw) => (
-                  <SortableDrawCard key={draw.id} draw={draw} />
+                  <SortableDrawCard 
+                    key={draw.id} 
+                    draw={draw} 
+                    format={selectedFormat}
+                  />
                 ))}
               </div>
             </SortableContext>
@@ -374,7 +509,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
             <Users className="h-16 w-16 text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-700 mb-2">No Draws Generated</h3>
             <p className="text-gray-500 mb-4 text-center">
-              {selectedRound ? `Generate British Parliamentary draws for Round ${selectedRound.round_number}` : 'Select a round and generate draws'}
+              {selectedRound ? `Generate ${getFormatLabel()} draws for Round ${selectedRound.round_number}` : 'Select a round and generate draws'}
             </p>
           </CardContent>
         </Card>
@@ -383,69 +518,127 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
   );
 }
 
-// Sortable Draw Card Component for British Parliamentary Format
-function SortableDrawCard({ draw }: { draw: EnhancedDraw }) {
-  return (
-    <Card className="border-2 border-blue-200 shadow-md hover:shadow-lg transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-lg font-bold text-blue-700">{draw.room}</CardTitle>
-          <Badge variant={
-            draw.status === 'pending' ? 'secondary' :
-            draw.status === 'in_progress' ? 'default' :
-            'default'
-          } className={
-            draw.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-            draw.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-            'bg-green-100 text-green-800'
-          }>
-            {draw.status === 'pending' ? (
-              <Clock className="mr-1 h-3 w-3" />
-            ) : draw.status === 'in_progress' ? (
-              <Play className="mr-1 h-3 w-3" />
-            ) : (
-              <CheckCircle className="mr-1 h-3 w-3" />
-            )}
-            {draw.status}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-green-600 uppercase">Opening Gov (OG)</div>
-            <div className="font-medium">{draw.og_team?.name || 'TBD'}</div>
-            <div className="text-xs text-gray-500">{draw.og_team?.institution}</div>
+// Sortable Draw Card Component for different debate formats
+function SortableDrawCard({ draw, format = 'bp' }: { draw: EnhancedDraw, format?: string }) {
+  // Render different layouts based on format
+  if (format === 'bp') {
+    return (
+      <Card className="border-2 border-blue-200 shadow-md hover:shadow-lg transition-shadow">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-lg font-bold text-blue-700">{draw.room}</CardTitle>
+            <Badge variant={
+              draw.status === 'pending' ? 'secondary' :
+              draw.status === 'in_progress' ? 'default' :
+              'default'
+            } className={
+              draw.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+              draw.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+              'bg-green-100 text-green-800'
+            }>
+              {draw.status === 'pending' ? (
+                <Clock className="mr-1 h-3 w-3" />
+              ) : draw.status === 'in_progress' ? (
+                <Play className="mr-1 h-3 w-3" />
+              ) : (
+                <CheckCircle className="mr-1 h-3 w-3" />
+              )}
+              {draw.status}
+            </Badge>
           </div>
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-red-600 uppercase">Opening Opp (OO)</div>
-            <div className="font-medium">{draw.oo_team?.name || 'TBD'}</div>
-            <div className="text-xs text-gray-500">{draw.oo_team?.institution}</div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-blue-600 uppercase">Closing Gov (CG)</div>
-            <div className="font-medium">{draw.cg_team?.name || 'Swing Team A'}</div>
-            <div className="text-xs text-gray-500">{draw.cg_team?.institution || 'Swing'}</div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-purple-600 uppercase">Closing Opp (CO)</div>
-            <div className="font-medium">{draw.co_team?.name || 'Swing Team B'}</div>
-            <div className="text-xs text-gray-500">{draw.co_team?.institution || 'Swing'}</div>
-          </div>
-        </div>
-        
-        {draw.judge_obj && (
-          <div className="border-t pt-3">
-            <div className="flex items-center gap-2">
-              <Gavel className="h-4 w-4 text-gray-500" />
-              <div>
-                <div className="font-medium">{draw.judge_obj.name}</div>
-                <div className="text-xs text-gray-500">{draw.judge_obj.institution}</div>
-              </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-green-600 uppercase">Opening Gov (OG)</div>
+              <div className="font-medium">{draw.og_team?.name || 'TBD'}</div>
+              <div className="text-xs text-gray-500">{draw.og_team?.institution}</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-red-600 uppercase">Opening Opp (OO)</div>
+              <div className="font-medium">{draw.oo_team?.name || 'TBD'}</div>
+              <div className="text-xs text-gray-500">{draw.oo_team?.institution}</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-blue-600 uppercase">Closing Gov (CG)</div>
+              <div className="font-medium">{draw.cg_team?.name || 'Swing Team A'}</div>
+              <div className="text-xs text-gray-500">{draw.cg_team?.institution || 'Swing'}</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-purple-600 uppercase">Closing Opp (CO)</div>
+              <div className="font-medium">{draw.co_team?.name || 'Swing Team B'}</div>
+              <div className="text-xs text-gray-500">{draw.co_team?.institution || 'Swing'}</div>
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+          
+          {draw.judge_obj && (
+            <div className="border-t pt-3">
+              <div className="flex items-center gap-2">
+                <Gavel className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="font-medium">{draw.judge_obj.name}</div>
+                  <div className="text-xs text-gray-500">{draw.judge_obj.institution}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  } else {
+    // WSDC or other 2-team formats
+    return (
+      <Card className="border-2 border-blue-200 shadow-md hover:shadow-lg transition-shadow">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-lg font-bold text-blue-700">{draw.room}</CardTitle>
+            <Badge variant={
+              draw.status === 'pending' ? 'secondary' :
+              draw.status === 'in_progress' ? 'default' :
+              'default'
+            } className={
+              draw.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+              draw.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+              'bg-green-100 text-green-800'
+            }>
+              {draw.status === 'pending' ? (
+                <Clock className="mr-1 h-3 w-3" />
+              ) : draw.status === 'in_progress' ? (
+                <Play className="mr-1 h-3 w-3" />
+              ) : (
+                <CheckCircle className="mr-1 h-3 w-3" />
+              )}
+              {draw.status}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-green-600 uppercase">Proposition</div>
+              <div className="font-medium">{draw.og_team?.name || 'TBD'}</div>
+              <div className="text-xs text-gray-500">{draw.og_team?.institution}</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-red-600 uppercase">Opposition</div>
+              <div className="font-medium">{draw.oo_team?.name || 'TBD'}</div>
+              <div className="text-xs text-gray-500">{draw.oo_team?.institution}</div>
+            </div>
+          </div>
+          
+          {draw.judge_obj && (
+            <div className="border-t pt-3">
+              <div className="flex items-center gap-2">
+                <Gavel className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="font-medium">{draw.judge_obj.name}</div>
+                  <div className="text-xs text-gray-500">{draw.judge_obj.institution}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 }

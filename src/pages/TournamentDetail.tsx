@@ -13,6 +13,7 @@ import { PublicAccessPanel } from "@/components/tournament/PublicAccessPanel";
 import { CSVUpload } from "@/components/teams/CSVUpload";
 import { JudgeForm } from "@/components/judges/JudgeForm";
 import { JudgesList } from "@/components/judges/JudgesList";
+import { JudgesBulkUpload } from "@/components/judges/JudgesBulkUpload";
 import { EnhancedRoundForm } from "@/components/rounds/EnhancedRoundForm";
 import { useTournamentData } from "@/hooks/useTournamentData";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -34,9 +35,10 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tournament, Team, Round, Draw, Judge, JudgeFormData, ExperienceLevel } from "@/types/tournament";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useDrawGenerator } from "@/hooks/useDrawGenerator";
 import { TeamsList } from "@/components/teams/TeamsList";
+import { FormatGuide } from "@/components/tournament/FormatGuide";
 
 interface TournamentCardData {
   id: string;
@@ -81,6 +83,7 @@ const TournamentDetail = () => {
 
   const [activeTab, setActiveTab] = useState("overview");
   const [showCSVUpload, setShowCSVUpload] = useState(false);
+  const [showJudgeUpload, setShowJudgeUpload] = useState(false);
   const [editJudge, setEditJudge] = useState<Judge | null>(null);
   const [isEditJudgeModalOpen, setIsEditJudgeModalOpen] = useState(false);
   const [isGeneratingDraws, setIsGeneratingDraws] = useState(false);
@@ -101,7 +104,8 @@ const TournamentDetail = () => {
           name: team.name,
           institution: team.institution || '',
           speaker_1: team.speaker_1 || '',
-          speaker_2: team.speaker_2 || ''
+          speaker_2: team.speaker_2 || '',
+          speaker_3: team.speaker_3 || ''
         });
       }
       toast.dismiss();
@@ -112,6 +116,32 @@ const TournamentDetail = () => {
       toast.dismiss();
       console.error('Error uploading teams:', error);
       toast.error('Failed to upload teams');
+    }
+  };
+
+  const handleJudgesUpload = async (uploadedJudges: JudgeFormData[]) => {
+    if (!uploadedJudges || uploadedJudges.length === 0) {
+      toast.error('No judges to upload');
+      return;
+    }
+
+    try {
+      toast.loading('Uploading judges...');
+      for (const judge of uploadedJudges) {
+        await addJudge({
+          name: judge.name,
+          institution: judge.institution || '',
+          experience_level: judge.experience_level || 'novice'
+        });
+      }
+      toast.dismiss();
+      toast.success(`Successfully uploaded ${uploadedJudges.length} judges!`);
+      setShowJudgeUpload(false);
+      refetch();
+    } catch (error) {
+      toast.dismiss();
+      console.error('Error uploading judges:', error);
+      toast.error('Failed to upload judges');
     }
   };
 
@@ -192,9 +222,13 @@ const TournamentDetail = () => {
       return;
     }
 
-    if (teams.length < 4) {
+    // Determine minimum teams required based on format
+    const format = tournament?.format || 'bp';
+    const minTeamsRequired = format === 'bp' ? 4 : 2;
+    
+    if (teams.length < minTeamsRequired) {
       console.error('Not enough teams:', teams.length);
-      toast.error('Need at least 4 teams to generate British Parliamentary draws');
+      toast.error(`Need at least ${minTeamsRequired} teams to generate ${format.toUpperCase()} draws`);
       return;
     }
 
@@ -208,15 +242,16 @@ const TournamentDetail = () => {
         throw new Error('Round not found');
       }
 
-      // Generate rooms based on number of teams (BP format: 4 teams per room)
-      const numRooms = Math.floor(teams.length / 4);
+      // Generate rooms based on format
+      const teamsPerRoom = format === 'bp' ? 4 : 2;
+      const numRooms = Math.floor(teams.length / teamsPerRoom);
       const rooms = Array.from({ length: numRooms }, (_, i) => `Room ${i + 1}`);
 
       // Use the enhanced draw generation
       await generateDrawsWithHistory(roundId, teams, rooms);
       
       toast.dismiss();
-      toast.success('British Parliamentary draws generated successfully!');
+      toast.success(`${format.toUpperCase()} draws generated successfully!`);
       
       // Refetch draws to update the UI
       setTimeout(() => {
@@ -283,6 +318,10 @@ const TournamentDetail = () => {
     setShowCSVUpload(!showCSVUpload);
   };
 
+  const handleQuickActionJudgeUpload = () => {
+    setShowJudgeUpload(!showJudgeUpload);
+  };
+
   const handleEditJudge = (judge: Judge) => {
     setEditJudge(judge);
     setIsEditJudgeModalOpen(true);
@@ -325,6 +364,7 @@ const TournamentDetail = () => {
   }
 
   const canEdit = canEditTournament(tournament.created_by);
+  const format = tournament.format || 'bp';
 
   const tournamentCardData: TournamentCardData = {
     id: tournament.id,
@@ -335,6 +375,10 @@ const TournamentDetail = () => {
     location: tournament.location || "TBD",
     status: (tournament.status as 'active' | 'upcoming' | 'completed') || "upcoming",
   };
+
+  // Calculate rooms based on format
+  const teamsPerRoom = format === 'bp' ? 4 : 2;
+  const roomsNeeded = Math.floor(teams.length / teamsPerRoom);
 
   const quickStats = [
     {
@@ -353,9 +397,9 @@ const TournamentDetail = () => {
       description: "Total rounds"
     },
     {
-      title: "BP Rooms",
-      value: Math.floor((teams?.length || 0) / 4),
-      description: "British Parliamentary rooms"
+      title: "Debate Rooms",
+      value: roomsNeeded,
+      description: `${format.toUpperCase()} format rooms`
     }
   ];
 
@@ -363,7 +407,7 @@ const TournamentDetail = () => {
     <MainLayout>
       <PageHeader
         title={tournament.name}
-        description={tournament.description || "British Parliamentary Tournament"}
+        description={tournament.description || `${format.toUpperCase()} Tournament`}
         actions={
           canEdit ? (
             <div className="flex gap-2">
@@ -465,7 +509,16 @@ const TournamentDetail = () => {
                       className="w-full justify-start"
                     >
                       <Upload className="h-4 w-4 mr-2" />
-                      Bulk Upload Teams (Optional)
+                      Bulk Upload Teams
+                    </Button>
+
+                    <Button
+                      onClick={handleQuickActionJudgeUpload}
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Bulk Upload Judges
                     </Button>
                   </div>
                   
@@ -474,9 +527,18 @@ const TournamentDetail = () => {
                       <CSVUpload onTeamsUploaded={handleCSVUpload} />
                     </div>
                   )}
+
+                  {showJudgeUpload && (
+                    <div className="mt-4">
+                      <JudgesBulkUpload onJudgesUploaded={handleJudgesUpload} />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* Format Guide */}
+            <FormatGuide format={format as any} />
           </TabsContent>
 
           <TabsContent value="teams">
@@ -545,7 +607,7 @@ const TournamentDetail = () => {
               roundId={rounds[0]?.id}
               teams={teams}
               judges={judges}
-              rooms={Array.from({ length: Math.floor(teams.length / 4) }, (_, i) => `Room ${i + 1}`)}
+              rooms={Array.from({ length: roomsNeeded }, (_, i) => `Room ${i + 1}`)}
               draws={draws}
               rounds={rounds}
               onStartRound={handleStartRound}
@@ -554,6 +616,7 @@ const TournamentDetail = () => {
               tournamentName={tournament.name}
               roundName={rounds[0] ? `Round ${rounds[0].round_number}` : undefined}
               publicMode={false}
+              format={format}
             />
           </TabsContent>
 

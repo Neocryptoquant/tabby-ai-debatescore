@@ -4,32 +4,40 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { ExperienceLevel } from '@/types/tournament';
 
-interface CSVUploadProps {
-  onTeamsUploaded: (teams: any[]) => void;
+interface JudgeData {
+  name: string;
+  institution?: string;
+  experience_level: ExperienceLevel;
 }
 
-export const CSVUpload = ({ onTeamsUploaded }: CSVUploadProps) => {
+interface JudgesBulkUploadProps {
+  onJudgesUploaded: (judges: JudgeData[]) => void;
+}
+
+export const JudgesBulkUpload = ({ onJudgesUploaded }: JudgesBulkUploadProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
-    const template = `team_name,institution,speaker_1,speaker_2,speaker_3
-Oxford A,Oxford University,John Smith,Jane Doe,Alex Johnson
-Cambridge A,Cambridge University,Mike Johnson,Sarah Wilson,Chris Taylor
-Harvard A,Harvard University,Robert Brown,Lisa Davis,Emma White`;
+    const template = `name,institution,experience_level
+John Smith,Oxford University,novice
+Jane Doe,Cambridge University,intermediate
+Robert Brown,Harvard University,open
+Lisa Davis,Stanford University,pro`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'teams_template.csv';
+    a.download = 'judges_template.csv';
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
-  const parseCSV = (text: string): any[] => {
+  const parseCSV = (text: string): JudgeData[] => {
     console.log("Parsing CSV:", text);
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length < 2) {
@@ -43,11 +51,11 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis,Emma White`;
     // Map headers to standardized field names
     const headerMap: Record<string, string> = {};
     
-    // Look for team name column
-    const teamNameIndex = headers.findIndex(h => 
-      h === 'team_name' || h === 'team name' || h === 'teamname' || h === 'team'
+    // Look for name column
+    const nameIndex = headers.findIndex(h => 
+      h === 'name' || h === 'judge name' || h === 'judge' || h === 'full name'
     );
-    if (teamNameIndex !== -1) headerMap[headers[teamNameIndex]] = 'name';
+    if (nameIndex !== -1) headerMap[headers[nameIndex]] = 'name';
     
     // Look for institution column
     const institutionIndex = headers.findIndex(h => 
@@ -55,30 +63,20 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis,Emma White`;
     );
     if (institutionIndex !== -1) headerMap[headers[institutionIndex]] = 'institution';
     
-    // Look for speaker columns
-    const speaker1Index = headers.findIndex(h => 
-      h === 'speaker_1' || h === 'speaker 1' || h === 'speaker1' || h === 'first speaker'
+    // Look for experience level column
+    const experienceIndex = headers.findIndex(h => 
+      h === 'experience_level' || h === 'experience' || h === 'level' || h === 'exp'
     );
-    if (speaker1Index !== -1) headerMap[headers[speaker1Index]] = 'speaker_1';
-    
-    const speaker2Index = headers.findIndex(h => 
-      h === 'speaker_2' || h === 'speaker 2' || h === 'speaker2' || h === 'second speaker'
-    );
-    if (speaker2Index !== -1) headerMap[headers[speaker2Index]] = 'speaker_2';
-    
-    const speaker3Index = headers.findIndex(h => 
-      h === 'speaker_3' || h === 'speaker 3' || h === 'speaker3' || h === 'third speaker'
-    );
-    if (speaker3Index !== -1) headerMap[headers[speaker3Index]] = 'speaker_3';
+    if (experienceIndex !== -1) headerMap[headers[experienceIndex]] = 'experience_level';
     
     console.log("Header mapping:", headerMap);
     
     // Check if we have the minimum required headers
-    if (teamNameIndex === -1) {
-      throw new Error('Missing required column: team name');
+    if (nameIndex === -1) {
+      throw new Error('Missing required column: name');
     }
 
-    const teams: any[] = [];
+    const judges: JudgeData[] = [];
     const errors: string[] = [];
 
     for (let i = 1; i < lines.length; i++) {
@@ -109,38 +107,43 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis,Emma White`;
       
       console.log(`Row ${i} values:`, values);
       
-      // Create team object using the header mapping
-      const team: Record<string, string> = {
+      // Create judge object using the header mapping
+      const judge: Record<string, string> = {
         name: '',
         institution: '',
-        speaker_1: '',
-        speaker_2: '',
-        speaker_3: ''
+        experience_level: 'novice'
       };
       
       // Map values to the correct fields
       headers.forEach((header, index) => {
         if (headerMap[header] && index < values.length) {
-          team[headerMap[header]] = values[index];
+          judge[headerMap[header]] = values[index];
         }
       });
       
-      console.log(`Parsed team:`, team);
+      console.log(`Parsed judge:`, judge);
       
-      // Validate team
-      if (!team.name) {
-        errors.push(`Row ${i + 1}: Team name is required`);
+      // Validate judge
+      if (!judge.name) {
+        errors.push(`Row ${i + 1}: Judge name is required`);
         continue;
       }
 
-      teams.push(team);
+      // Validate experience level
+      const validExperienceLevels: ExperienceLevel[] = ['novice', 'intermediate', 'open', 'pro'];
+      if (judge.experience_level && !validExperienceLevels.includes(judge.experience_level as ExperienceLevel)) {
+        judge.experience_level = 'novice'; // Default to novice if invalid
+        errors.push(`Row ${i + 1}: Invalid experience level for ${judge.name}, defaulting to novice`);
+      }
+
+      judges.push(judge as JudgeData);
     }
 
     if (errors.length > 0) {
       setUploadErrors(errors);
     }
 
-    return teams;
+    return judges;
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,18 +160,18 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis,Emma White`;
 
     try {
       const text = await file.text();
-      console.log("CSV content:", text); // Debug log
+      console.log("CSV content:", text);
       
-      const teams = parseCSV(text);
+      const judges = parseCSV(text);
       
-      if (teams.length === 0) {
-        toast.error('No valid teams found in CSV file');
+      if (judges.length === 0) {
+        toast.error('No valid judges found in CSV file');
         return;
       }
 
-      console.log("Parsed teams:", teams); // Debug log
-      onTeamsUploaded(teams);
-      toast.success(`Successfully parsed ${teams.length} teams from CSV`);
+      console.log("Parsed judges:", judges);
+      onJudgesUploaded(judges);
+      toast.success(`Successfully parsed ${judges.length} judges from CSV`);
       
       // Reset file input
       if (fileInputRef.current) {
@@ -187,13 +190,13 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis,Emma White`;
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
-          Bulk Team Upload
+          Bulk Judge Upload
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <p className="text-sm text-gray-600">
-            Upload teams in bulk using a CSV file. Download the template to see the required format.
+            Upload judges in bulk using a CSV file. Download the template to see the required format.
           </p>
           
           <div className="flex gap-2">
@@ -245,8 +248,9 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis,Emma White`;
         )}
 
         <div className="text-xs text-gray-500 space-y-1">
-          <p><strong>Required columns:</strong> team_name, institution, speaker_1, speaker_2</p>
-          <p><strong>Optional columns:</strong> speaker_3 (for WSDC format)</p>
+          <p><strong>Required columns:</strong> name</p>
+          <p><strong>Optional columns:</strong> institution, experience_level</p>
+          <p><strong>Valid experience levels:</strong> novice, intermediate, open, pro</p>
           <p><strong>Format:</strong> CSV with comma-separated values</p>
           <p><strong>Note:</strong> First row should contain column headers</p>
         </div>

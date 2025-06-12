@@ -39,8 +39,10 @@ export interface Team {
   institution?: string;
   speaker_1?: string;
   speaker_2?: string;
+  speaker_3?: string;
   speaker1_name?: string;
   speaker2_name?: string;
+  speaker3_name?: string;
   experience_level?: ExperienceLevel;
   break_category?: string;
   created_at?: string;
@@ -80,6 +82,8 @@ export interface EnhancedDraw extends Draw {
 
 export type ExperienceLevel = 'novice' | 'intermediate' | 'open' | 'pro';
 
+export type DebateFormat = 'bp' | 'wsdc' | 'ap' | 'cp' | 'pf' | 'ld' | 'policy';
+
 export interface BreakCategory {
   id: string;
   name: string;
@@ -93,6 +97,7 @@ export interface TournamentRegistration {
   institution?: string;
   speaker_1: string;
   speaker_2?: string;
+  speaker_3?: string;
   experience_level: ExperienceLevel;
   break_category?: string;
 }
