@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
@@ -8,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { BrainCircuit, Mail } from "lucide-react";
+import { BrainCircuit, Mail, LogIn } from "lucide-react";
 import { signInWithPassword, signInWithProvider } from "@/lib/auth";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -21,6 +21,7 @@ type FormValues = z.infer<typeof formSchema>;
 const SignIn = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -46,11 +47,19 @@ const SignIn = () => {
   };
   
   const handleGoogleLogin = async () => {
-    setIsLoading(true);
+    setGoogleLoading(true);
     try {
-      await signInWithProvider('google');
+      const { success, data } = await signInWithProvider('google');
+      // If success is true but we have data, it means we're being redirected
+      if (success && data) {
+        // The redirect will happen automatically
+        console.log("Redirecting to Google auth...");
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
     } finally {
-      setIsLoading(false);
+      // This might not run if we're redirected
+      setGoogleLoading(false);
     }
   };
   
@@ -76,12 +85,22 @@ const SignIn = () => {
             <div className="grid grid-cols-1 gap-4">
               <Button 
                 variant="outline" 
-                className="w-full"
+                className="w-full flex items-center justify-center gap-2"
                 onClick={handleGoogleLogin}
-                disabled={isLoading}
+                disabled={googleLoading || isLoading}
               >
-                <Mail className="mr-2 h-4 w-4" />
-                Google
+                {googleLoading ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+                      <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                        <path d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.2,4.73C15.29,4.73 17.1,6.7 17.1,6.7L19,4.72C19,4.72 16.56,2 12.1,2C6.42,2 2.03,6.8 2.03,12C2.03,17.05 6.16,22 12.25,22C17.6,22 21.5,18.33 21.5,12.91C21.5,11.76 21.35,11.1 21.35,11.1V11.1Z" fill="currentColor"></path>
+                      </g>
+                    </svg>
+                    <span>Continue with Google</span>
+                  </>
+                )}
               </Button>
             </div>
             
@@ -135,7 +154,14 @@ const SignIn = () => {
                 />
                 
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign in"}
+                  {isLoading ? (
+                    <LoadingSpinner size="sm" text="Signing in..." />
+                  ) : (
+                    <>
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Sign in
+                    </>
+                  )}
                 </Button>
               </form>
             </Form>
