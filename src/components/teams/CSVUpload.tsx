@@ -79,7 +79,7 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis`;
 
     for (let i = 1; i < lines.length; i++) {
       // Handle CSV parsing with quotes and commas
-      let row = lines[i];
+      const row = lines[i];
       let values: string[] = [];
       let currentValue = '';
       let inQuotes = false;

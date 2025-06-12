@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,34 +6,57 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { EnhancedProtectedRoute } from "@/components/auth/EnhancedProtectedRoute";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
-// Pages
+// Lazy-loaded components for better performance
+import {
+  LazyDashboard,
+  LazyTournaments,
+  LazyCreateTournament,
+  LazyEditTournament,
+  LazyTournamentDetail,
+  LazyTeams,
+  LazyRounds,
+  LazyResults,
+  LazySettings,
+  LazyAIAnalysis,
+  LazySignIn,
+  LazySignUp,
+  LazyCallback,
+  LazyConfirmation,
+  LazyPublicTournament,
+} from "@/components/optimized/LazyRoutes";
+
+// Static imports for critical pages
 import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import Tournaments from "./pages/Tournaments";
-import CreateTournament from "./pages/CreateTournament";
-import EditTournament from "./pages/EditTournament";
-import TournamentDetail from "./pages/TournamentDetail";
-import TournamentTeams from "./pages/TournamentTeams";
-import Teams from "./pages/Teams";
-import Rounds from "./pages/Rounds";
-import Results from "./pages/Results";
-import Settings from "./pages/Settings";
-import AIAnalysis from "./pages/AIAnalysis";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
-import PublicTournament from "./pages/PublicTournament";
 
-// Auth pages
-import SignIn from "./pages/auth/SignIn";
-import SignUp from "./pages/auth/SignUp";
-import Callback from "./pages/auth/Callback";
-import Confirmation from "./pages/auth/Confirmation";
+// Optimized QueryClient configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      retry: (failureCount, error: any) => {
+        // Don't retry on authentication errors
+        if (error?.status === 401 || error?.status === 403) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
-const queryClient = new QueryClient();
-
+/**
+ * Main App component with optimized routing and error handling
+ * Implements lazy loading for better performance and proper error boundaries
+ */
 function App() {
   return (
     <ErrorBoundary>
@@ -45,81 +67,79 @@ function App() {
           <BrowserRouter>
             <AuthProvider>
               <Routes>
-                {/* Public routes */}
+                {/* Public routes - no lazy loading for critical paths */}
                 <Route path="/" element={<Index />} />
-                <Route path="/auth/signin" element={<SignIn />} />
-                <Route path="/auth/sign-in" element={<SignIn />} />
-                <Route path="/auth/signup" element={<SignUp />} />
-                <Route path="/auth/sign-up" element={<SignUp />} />
-                <Route path="/auth/callback" element={<Callback />} />
-                <Route path="/auth/confirmation" element={<Confirmation />} />
-                <Route path="/public/tournament/:token" element={<PublicTournament />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
                 
-                {/* Protected routes */}
+                {/* Auth routes - lazy loaded */}
+                <Route path="/auth/signin" element={<LazySignIn />} />
+                <Route path="/auth/sign-in" element={<LazySignIn />} />
+                <Route path="/auth/signup" element={<LazySignUp />} />
+                <Route path="/auth/sign-up" element={<LazySignUp />} />
+                <Route path="/auth/callback" element={<LazyCallback />} />
+                <Route path="/auth/confirmation" element={<LazyConfirmation />} />
+                
+                {/* Public tournament access */}
+                <Route path="/public/tournament/:token" element={<LazyPublicTournament />} />
+                
+                {/* Protected routes - lazy loaded */}
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <LazyDashboard />
                   </ProtectedRoute>
                 } />
                 
                 <Route path="/tournaments" element={
                   <ProtectedRoute>
-                    <Tournaments />
+                    <LazyTournaments />
                   </ProtectedRoute>
                 } />
                 
                 <Route path="/tournaments/create" element={
                   <ProtectedRoute>
-                    <CreateTournament />
+                    <LazyCreateTournament />
                   </ProtectedRoute>
                 } />
                 
                 <Route path="/tournaments/:id" element={
                   <ProtectedRoute>
-                    <TournamentDetail />
+                    <LazyTournamentDetail />
                   </ProtectedRoute>
                 } />
                 
                 <Route path="/tournaments/:id/edit" element={
                   <ProtectedRoute>
-                    <EditTournament />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/tournaments/:id/teams" element={
-                  <ProtectedRoute>
-                    <TournamentTeams />
+                    <LazyEditTournament />
                   </ProtectedRoute>
                 } />
                 
                 <Route path="/teams" element={
                   <ProtectedRoute>
-                    <Teams />
+                    <LazyTeams />
                   </ProtectedRoute>
                 } />
                 
                 <Route path="/rounds" element={
                   <ProtectedRoute>
-                    <Rounds />
+                    <LazyRounds />
                   </ProtectedRoute>
                 } />
                 
                 <Route path="/results" element={
                   <ProtectedRoute>
-                    <Results />
+                    <LazyResults />
                   </ProtectedRoute>
                 } />
                 
                 <Route path="/settings" element={
                   <ProtectedRoute>
-                    <Settings />
+                    <LazySettings />
                   </ProtectedRoute>
                 } />
                 
                 <Route path="/ai-analysis" element={
                   <ProtectedRoute>
-                    <AIAnalysis />
+                    <LazyAIAnalysis />
                   </ProtectedRoute>
                 } />
                 
