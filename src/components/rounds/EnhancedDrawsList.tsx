@@ -60,19 +60,19 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
   useEffect(() => {
     const roundDraws = props.draws.filter(draw => draw.round_id === selectedRoundId);
     const enhancedDraws: EnhancedDraw[] = roundDraws.map(draw => {
-      // Find the teams by ID
-      const govTeam = props.teams.find(t => t.id === draw.gov_team_id);
-      const oppTeam = props.teams.find(t => t.id === draw.opp_team_id);
-      const cgTeam = draw.cg_team_id ? props.teams.find(t => t.id === draw.cg_team_id) : undefined;
-      const coTeam = draw.co_team_id ? props.teams.find(t => t.id === draw.co_team_id) : undefined;
+      // Map database columns to British Parliamentary positions correctly
+      const ogTeam = props.teams.find(t => t.id === draw.gov_team_id);  // Opening Government
+      const ooTeam = props.teams.find(t => t.id === draw.opp_team_id);  // Opening Opposition
+      const cgTeam = draw.cg_team_id ? props.teams.find(t => t.id === draw.cg_team_id) : undefined;  // Closing Government
+      const coTeam = draw.co_team_id ? props.teams.find(t => t.id === draw.co_team_id) : undefined;  // Closing Opposition
       const judgeObj = draw.judge_id ? props.judges.find(j => j.id === draw.judge_id) : undefined;
       
       return {
         ...draw,
-        gov_team: govTeam,
-        opp_team: oppTeam,
-        cg_team: cgTeam,
-        co_team: coTeam,
+        og_team: ogTeam,  // Opening Government
+        oo_team: ooTeam,  // Opening Opposition
+        cg_team: cgTeam,  // Closing Government
+        co_team: coTeam,  // Closing Opposition
         judge_obj: judgeObj
       };
     });
@@ -120,15 +120,16 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
 
       const drawRooms = generator.generateDraws();
       
-      // Convert to database format
+      // Convert to database format with correct BP mapping
       const drawsForDatabase = drawRooms.map(room => ({
         round_id: selectedRoundId,
         tournament_id: props.tournamentId,
         room: room.room,
-        gov_team_id: room.teams.OG.id,
-        opp_team_id: room.teams.OO.id,
-        cg_team_id: room.teams.CG.id,
-        co_team_id: room.teams.CO.id,
+        // Map British Parliamentary positions to database columns:
+        gov_team_id: room.teams.OG.id,    // Opening Government -> gov_team_id
+        opp_team_id: room.teams.OO.id,    // Opening Opposition -> opp_team_id
+        cg_team_id: room.teams.CG.id,     // Closing Government -> cg_team_id
+        co_team_id: room.teams.CO.id,     // Closing Opposition -> co_team_id
         judge_id: room.judge?.id,
         judge: room.judge?.name,
         status: 'pending'
@@ -412,22 +413,22 @@ function SortableDrawCard({ draw }: { draw: EnhancedDraw }) {
       <CardContent className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-green-600 uppercase">Opening Gov</div>
-            <div className="font-medium">{draw.gov_team?.name || 'TBD'}</div>
-            <div className="text-xs text-gray-500">{draw.gov_team?.institution}</div>
+            <div className="text-xs font-medium text-green-600 uppercase">Opening Gov (OG)</div>
+            <div className="font-medium">{draw.og_team?.name || 'TBD'}</div>
+            <div className="text-xs text-gray-500">{draw.og_team?.institution}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs font-medium text-red-600 uppercase">Opening Opp</div>
-            <div className="font-medium">{draw.opp_team?.name || 'TBD'}</div>
-            <div className="text-xs text-gray-500">{draw.opp_team?.institution}</div>
+            <div className="text-xs font-medium text-red-600 uppercase">Opening Opp (OO)</div>
+            <div className="font-medium">{draw.oo_team?.name || 'TBD'}</div>
+            <div className="text-xs text-gray-500">{draw.oo_team?.institution}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs font-medium text-blue-600 uppercase">Closing Gov</div>
+            <div className="text-xs font-medium text-blue-600 uppercase">Closing Gov (CG)</div>
             <div className="font-medium">{draw.cg_team?.name || 'Swing Team A'}</div>
             <div className="text-xs text-gray-500">{draw.cg_team?.institution || 'Swing'}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-xs font-medium text-purple-600 uppercase">Closing Opp</div>
+            <div className="text-xs font-medium text-purple-600 uppercase">Closing Opp (CO)</div>
             <div className="font-medium">{draw.co_team?.name || 'Swing Team B'}</div>
             <div className="text-xs text-gray-500">{draw.co_team?.institution || 'Swing'}</div>
           </div>

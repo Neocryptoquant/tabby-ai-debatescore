@@ -47,16 +47,17 @@ export interface Team {
   updated_at?: string;
 }
 
-// Database Draw interface (matches actual database schema)
+// Database Draw interface (matches actual database schema with correct BP mapping)
 export interface Draw {
   id: string;
   round_id: string;
   tournament_id?: string;
   room: string;
-  gov_team_id: string;
-  opp_team_id: string;
-  cg_team_id?: string;
-  co_team_id?: string;
+  // British Parliamentary positions mapped to database columns:
+  gov_team_id: string;    // Opening Government (OG)
+  opp_team_id: string;    // Opening Opposition (OO)
+  cg_team_id?: string;    // Closing Government (CG)
+  co_team_id?: string;    // Closing Opposition (CO)
   judge_id?: string;
   judge?: string;
   status: 'pending' | 'in_progress' | 'completed';
@@ -69,10 +70,11 @@ export interface Draw {
 
 // Enhanced Draw interface for UI (includes populated relationships)
 export interface EnhancedDraw extends Draw {
-  gov_team?: Team;
-  opp_team?: Team;
-  cg_team?: Team;
-  co_team?: Team;
+  // British Parliamentary teams with clear naming
+  og_team?: Team;  // Opening Government (maps to gov_team_id)
+  oo_team?: Team;  // Opening Opposition (maps to opp_team_id)
+  cg_team?: Team;  // Closing Government (maps to cg_team_id)
+  co_team?: Team;  // Closing Opposition (maps to co_team_id)
   judge_obj?: Judge;
 }
 

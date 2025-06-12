@@ -4,10 +4,10 @@ interface DrawRoom {
   id: string;
   room: string;
   teams: {
-    OG: Team;
-    OO: Team;
-    CG: Team;
-    CO: Team;
+    OG: Team;  // Opening Government
+    OO: Team;  // Opening Opposition
+    CG: Team;  // Closing Government
+    CO: Team;  // Closing Opposition
   };
   judge?: Judge;
 }
@@ -195,15 +195,17 @@ export class EnhancedDrawGenerator {
   }
 
   // Convert DrawRoom to database format for British Parliamentary
+  // IMPORTANT: Maps BP positions to existing database columns correctly
   public convertToDraws(drawRooms: DrawRoom[], roundId: string, tournamentId: string): Omit<Draw, 'id' | 'created_at' | 'updated_at'>[] {
     return drawRooms.map(room => ({
       round_id: roundId,
       tournament_id: tournamentId,
       room: room.room,
-      gov_team_id: room.teams.OG.id,    // Opening Government
-      opp_team_id: room.teams.OO.id,    // Opening Opposition
-      cg_team_id: room.teams.CG.id,     // Closing Government  
-      co_team_id: room.teams.CO.id,     // Closing Opposition
+      // Map British Parliamentary positions to database columns:
+      gov_team_id: room.teams.OG.id,    // Opening Government -> gov_team_id
+      opp_team_id: room.teams.OO.id,    // Opening Opposition -> opp_team_id
+      cg_team_id: room.teams.CG.id,     // Closing Government -> cg_team_id
+      co_team_id: room.teams.CO.id,     // Closing Opposition -> co_team_id
       judge_id: room.judge?.id,
       judge: room.judge?.name,
       status: 'pending' as const,
