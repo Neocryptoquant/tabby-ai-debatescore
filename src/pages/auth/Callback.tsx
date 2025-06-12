@@ -31,7 +31,7 @@ const Callback = () => {
           // Check if user profile exists, if not create it
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id')
             .eq('id', data.session.user.id)
             .maybeSingle();
             
@@ -49,11 +49,14 @@ const Callback = () => {
                 id: data.session.user.id,
                 full_name: user_metadata?.full_name || user_metadata?.name || '',
                 avatar_url: user_metadata?.avatar_url || null,
+                institution: user_metadata?.institution || null,
                 email: data.session.user.email
               });
               
             if (insertError) {
               console.error("Error creating profile:", insertError);
+            } else {
+              console.log("Profile created successfully");
             }
           }
           

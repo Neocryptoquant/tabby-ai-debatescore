@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
+import { toast } from "sonner";
 
 interface AuthContextProps {
   session: Session | null;
@@ -67,7 +68,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
             avatar_url: user.user_metadata?.avatar_url || null,
             institution: user.user_metadata?.institution || null,
-            bio: null,
+            email: user.email
           });
 
         if (insertError) {
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
   
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
@@ -98,11 +99,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     );
     
-    // THEN check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('Initial session:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Create/update profile if user exists
+      if (session?.user) {
+        createOrUpdateProfile(session.user);
+      }
+      
       setIsLoading(false);
     });
     

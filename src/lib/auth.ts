@@ -16,7 +16,7 @@ export type SignUpWithPasswordCredentials = {
 
 export async function signInWithPassword({ email, password }: SignInWithPasswordCredentials) {
   try {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -26,7 +26,7 @@ export async function signInWithPassword({ email, password }: SignInWithPassword
       return { error };
     }
 
-    return { success: true };
+    return { success: true, data };
   } catch (error) {
     console.error("Sign in error:", error);
     toast.error("Something went wrong. Please try again.");
@@ -36,7 +36,7 @@ export async function signInWithPassword({ email, password }: SignInWithPassword
 
 export async function signUpWithPassword({ email, password, full_name, institution }: SignUpWithPasswordCredentials) {
   try {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -53,7 +53,7 @@ export async function signUpWithPassword({ email, password, full_name, instituti
     }
 
     toast.success("Sign up successful! Please check your email for a confirmation link.");
-    return { success: true };
+    return { success: true, data };
   } catch (error) {
     console.error("Sign up error:", error);
     toast.error("Something went wrong. Please try again.");
@@ -75,6 +75,8 @@ export async function signInWithProvider(provider: Provider) {
       return { error };
     }
 
+    // For OAuth, we just return success and the data
+    // The actual redirect happens automatically
     return { success: true, data };
   } catch (error) {
     console.error("Social login error:", error);
