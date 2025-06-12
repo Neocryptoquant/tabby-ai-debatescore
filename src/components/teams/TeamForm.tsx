@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Save, Users } from "lucide-react";
 import { OperationFeedback } from "@/components/feedback/OperationFeedback";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import React from "react";
 import { Team } from "@/types/tournament";
 
@@ -15,6 +15,7 @@ interface TeamFormData {
   institution: string;
   speaker_1: string;
   speaker_2: string;
+  speaker_3?: string;
 }
 
 interface TeamFormProps {
@@ -22,13 +23,14 @@ interface TeamFormProps {
   isLoading?: boolean;
   defaultValues?: Partial<TeamFormData>;
   isEditMode?: boolean;
+  format?: string;
 }
 
 /**
  * Form component for adding new teams to tournaments
  * Includes validation, loading states, and success/error feedback
  */
-export const TeamForm = ({ onSave, isLoading = false, defaultValues = {}, isEditMode = false }: TeamFormProps) => {
+export const TeamForm = ({ onSave, isLoading = false, defaultValues = {}, isEditMode = false, format = 'bp' }: TeamFormProps) => {
   const [operationStatus, setOperationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   
   const {
@@ -63,6 +65,9 @@ export const TeamForm = ({ onSave, isLoading = false, defaultValues = {}, isEdit
       setTimeout(() => setOperationStatus('idle'), 4000);
     }
   };
+
+  // Determine if we need to show the third speaker field based on format
+  const showThirdSpeaker = format === 'wsdc';
 
   return (
     <Card>
@@ -110,7 +115,7 @@ export const TeamForm = ({ onSave, isLoading = false, defaultValues = {}, isEdit
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={`grid grid-cols-1 ${showThirdSpeaker ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
             <div>
               <Label htmlFor="speaker_1">Speaker 1 *</Label>
               <Input
@@ -136,6 +141,21 @@ export const TeamForm = ({ onSave, isLoading = false, defaultValues = {}, isEdit
                 <p className="text-sm text-red-600 mt-1">{errors.speaker_2.message}</p>
               )}
             </div>
+
+            {showThirdSpeaker && (
+              <div>
+                <Label htmlFor="speaker_3">Speaker 3 *</Label>
+                <Input
+                  id="speaker_3"
+                  {...register("speaker_3", { required: "Speaker 3 is required for WSDC format" })}
+                  placeholder="Third Speaker"
+                  disabled={isLoading}
+                />
+                {errors.speaker_3 && (
+                  <p className="text-sm text-red-600 mt-1">{errors.speaker_3.message}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <Button 
