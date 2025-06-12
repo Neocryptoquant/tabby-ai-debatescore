@@ -19,7 +19,10 @@ interface JudgeFormProps {
 
 export const JudgeForm = ({ onSave, isLoading = false, defaultValues = {}, isEditMode = false }: JudgeFormProps) => {
   const { register, handleSubmit, reset, watch, setValue } = useForm<JudgeFormData>({
-    defaultValues: defaultValues as JudgeFormData
+    defaultValues: {
+      experience_level: 'novice' as ExperienceLevel,
+      ...defaultValues
+    } as JudgeFormData
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -35,7 +38,12 @@ export const JudgeForm = ({ onSave, isLoading = false, defaultValues = {}, isEdi
   const onSubmit = async (data: JudgeFormData) => {
     setIsSaving(true);
     try {
-      await onSave(data);
+      // Ensure experience_level has a valid value
+      const formData = {
+        ...data,
+        experience_level: data.experience_level || 'novice' as ExperienceLevel
+      };
+      await onSave(formData);
       if (!isEditMode) reset();
     } catch (error) {
       // Error handling is done in the parent component
@@ -91,7 +99,7 @@ export const JudgeForm = ({ onSave, isLoading = false, defaultValues = {}, isEdi
             <Select 
               onValueChange={(value) => setValue("experience_level", value as ExperienceLevel)}
               disabled={isSaving}
-              value={watch("experience_level")}
+              value={watch("experience_level") || 'novice'}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select experience level" />
