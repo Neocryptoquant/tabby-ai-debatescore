@@ -1,73 +1,126 @@
-# Welcome to your Lovable project
+# Tabby AI DebateScore
 
-## Project info
+A modern, AI-powered debate tournament management system built with React, TypeScript, and Supabase.
 
-**URL**: https://lovable.dev/projects/6cd4579f-d605-4de3-bdb9-59350e3af6a6
+## 🌟 Features
 
-## How can I edit this code?
+- **Tournament Management**
+  - Create and manage debate tournaments
+  - Support for British Parliamentary (BP) format
+  - Real-time tournament status tracking
+  - Public access control for tournaments
 
-There are several ways of editing your application.
+- **Team Management**
+  - Add and manage debate teams
+  - Bulk team import via CSV
+  - Team performance analytics
+  - Speaker tracking
 
-**Use Lovable**
+- **Judge Management**
+  - Add and manage judges
+  - Judge experience level tracking
+  - Judge assignment system
+  - Performance analytics
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/6cd4579f-d605-4de3-bdb9-59350e3af6a6) and start prompting.
+- **Round Management**
+  - Create and manage debate rounds
+  - Motion management
+  - Round status tracking
+  - Automated draw generation
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Draw Generation**
+  - Automated BP draw generation
+  - Draw history tracking
+  - Manual draw adjustments
+  - Room management
 
-**Use your preferred IDE**
+- **Analytics Dashboard**
+  - Tournament statistics
+  - Team performance metrics
+  - Judge performance tracking
+  - Real-time updates
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚀 Tech Stack
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **Frontend**
+  - React 18
+  - TypeScript
+  - Vite
+  - Tailwind CSS
+  - Shadcn UI Components
+  - React Router DOM
+  - React Query
+  - React Hook Form
+  - Zod Validation
 
-Follow these steps:
+- **Backend**
+  - Supabase
+  - PostgreSQL
+  - Row Level Security (RLS)
+  - Real-time subscriptions
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+- **Development Tools**
+  - ESLint
+  - TypeScript
+  - Tailwind CSS
+  - PostCSS
+  - SWC
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 🛠️ Installation
 
-# Step 3: Install the necessary dependencies.
-npm i
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/tabby-ai-debatescore.git
+   cd tabby-ai-debatescore
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+2. Install dependencies:
+   ```bash
+   yarn install
+   ```
 
-**Edit a file directly in GitHub**
+3. Set up environment variables:
+   Create a `.env` file in the root directory with:
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+4. Start the development server:
+   ```bash
+   yarn dev
+   ```
 
-**Use GitHub Codespaces**
+## 📦 Available Scripts
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- `yarn dev` - Start development server
+- `yarn build` - Build for production
+- `yarn build:dev` - Build for development
+- `yarn lint` - Run ESLint
+- `yarn preview` - Preview production build
 
-## What technologies are used for this project?
+## 🔒 Security Features
 
-This project is built with:
+- Row Level Security (RLS) policies
+- Authentication and authorization
+- Protected API routes
+- Secure data access patterns
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🤝 Contributing
 
-## How can I deploy this project?
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-Simply open [Lovable](https://lovable.dev/projects/6cd4579f-d605-4de3-bdb9-59350e3af6a6) and click on Share -> Publish.
+## 📝 License
 
-## Can I connect a custom domain to my Lovable project?
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Yes, you can!
+## 🙏 Acknowledgments
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- [Shadcn UI](https://ui.shadcn.com/) for the beautiful UI components
+- [Supabase](https://supabase.com/) for the backend infrastructure
+- [Vite](https://vitejs.dev/) for the build tooling
+- [Tailwind CSS](https://tailwindcss.com/) for the styling
