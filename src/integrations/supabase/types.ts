@@ -59,6 +59,8 @@ export type Database = {
       }
       draws: {
         Row: {
+          cg_team_id: string | null
+          co_team_id: string | null
           created_at: string
           generation_history_id: string | null
           gov_score: number | null
@@ -75,6 +77,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cg_team_id?: string | null
+          co_team_id?: string | null
           created_at?: string
           generation_history_id?: string | null
           gov_score?: number | null
@@ -91,6 +95,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cg_team_id?: string | null
+          co_team_id?: string | null
           created_at?: string
           generation_history_id?: string | null
           gov_score?: number | null
@@ -107,6 +113,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "draws_cg_team_id_fkey"
+            columns: ["cg_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draws_co_team_id_fkey"
+            columns: ["co_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "draws_generation_history_id_fkey"
             columns: ["generation_history_id"]
