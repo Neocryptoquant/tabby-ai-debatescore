@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeader from "@/components/layout/PageHeader";
@@ -15,6 +15,7 @@ import { JudgeForm } from "@/components/judges/JudgeForm";
 import { JudgesList } from "@/components/judges/JudgesList";
 import { JudgesBulkUpload } from "@/components/judges/JudgesBulkUpload";
 import { EnhancedRoundForm } from "@/components/rounds/EnhancedRoundForm";
+import { BallotManager } from "@/components/ballot/BallotManager";
 import { useTournamentData } from "@/hooks/useTournamentData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
@@ -424,7 +425,7 @@ const TournamentDetail = () => {
         <TournamentCard {...tournamentCardData} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-7 max-w-4xl">
+          <TabsList className="grid grid-cols-8 max-w-4xl">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Overview
@@ -444,6 +445,10 @@ const TournamentDetail = () => {
             <TabsTrigger value="draws" className="flex items-center gap-2">
               <Trophy className="h-4 w-4" />
               Draws
+            </TabsTrigger>
+            <TabsTrigger value="ballots" className="flex items-center gap-2">
+              <Gavel className="h-4 w-4" />
+              Ballots
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -617,6 +622,15 @@ const TournamentDetail = () => {
               roundName={rounds[0] ? `Round ${rounds[0].round_number}` : undefined}
               publicMode={false}
               format={format}
+            />
+          </TabsContent>
+
+          <TabsContent value="ballots">
+            <BallotManager
+              tournamentId={id!}
+              judges={judges}
+              rounds={rounds}
+              draws={draws}
             />
           </TabsContent>
 

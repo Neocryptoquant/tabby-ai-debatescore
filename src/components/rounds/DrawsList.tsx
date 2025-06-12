@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useState } from "react";
 import { Team, Draw, Round, Judge } from '@/types/tournament';
 import { EnhancedDrawsList } from './EnhancedDrawsList';
@@ -31,6 +30,7 @@ interface DrawsListProps {
   roundName?: string;
   publicMode?: boolean;
   onGenerateDraws?: (roundId: string) => Promise<void>;
+  format?: string;
 }
 
 export function DrawsList(props: DrawsListProps) {

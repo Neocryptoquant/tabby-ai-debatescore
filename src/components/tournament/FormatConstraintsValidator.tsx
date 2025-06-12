@@ -3,7 +3,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, AlertTriangle, XCircle, Info } from 'lucide-react';
-import { DebateFormat, DEBATE_FORMATS, FormatUtils } from '@/types/formats';
+import { DebateFormat } from '@/types/tournament';
 
 interface ValidationResult {
   type: 'success' | 'warning' | 'error' | 'info';
@@ -23,25 +23,58 @@ interface FormatConstraintsValidatorProps {
  * Validates tournament setup against format-specific constraints
  */
 function validateTournamentSetup(
-  formatSpec: any,
+  format: DebateFormat,
   teamCount: number,
   judgeCount: number,
   roundCount: number
 ): ValidationResult[] {
   const validations: ValidationResult[] = [];
+  
+  // Format-specific constraints
+  const formatSpecs = {
+    bp: {
+      name: 'British Parliamentary',
+      minTeams: 4,
+      maxTeams: 400,
+      teamsPerDebate: 4,
+      minJudgesPerRoom: 1,
+      maxRoundsPerDay: 5,
+      speakersPerTeam: 2
+    },
+    wsdc: {
+      name: 'World Schools',
+      minTeams: 4,
+      maxTeams: 64,
+      teamsPerDebate: 2,
+      minJudgesPerRoom: 1,
+      maxRoundsPerDay: 3,
+      speakersPerTeam: 3
+    },
+    ap: {
+      name: 'American Parliamentary',
+      minTeams: 4,
+      maxTeams: 200,
+      teamsPerDebate: 2,
+      minJudgesPerRoom: 1,
+      maxRoundsPerDay: 6,
+      speakersPerTeam: 2
+    }
+  };
+  
+  const spec = formatSpecs[format];
 
   // Team count validation
-  if (teamCount < formatSpec.drawRules.minTeamsForTournament) {
+  if (teamCount < spec.minTeams) {
     validations.push({
       type: 'error',
-      message: `Insufficient teams for ${formatSpec.name}`,
-      details: [`Minimum ${formatSpec.drawRules.minTeamsForTournament} teams required, you have ${teamCount}`]
+      message: `Insufficient teams for ${spec.name}`,
+      details: [`Minimum ${spec.minTeams} teams required, you have ${teamCount}`]
     });
-  } else if (teamCount > formatSpec.drawRules.maxTeamsForTournament) {
+  } else if (teamCount > spec.maxTeams) {
     validations.push({
       type: 'error',
-      message: `Too many teams for ${formatSpec.name}`,
-      details: [`Maximum ${formatSpec.drawRules.maxTeamsForTournament} teams allowed, you have ${teamCount}`]
+      message: `Too many teams for ${spec.name}`,
+      details: [`Maximum ${spec.maxTeams} teams allowed, you have ${teamCount}`]
     });
   } else {
     validations.push({
@@ -52,28 +85,17 @@ function validateTournamentSetup(
   }
 
   // Judge count validation
-  const requiredRooms = formatSpec.drawRules.roomsRequired(teamCount);
-  const minJudgesRequired = requiredRooms * formatSpec.adjudication.minJudges;
-  const maxJudgesRecommended = requiredRooms * formatSpec.adjudication.maxJudges;
+  const requiredRooms = Math.floor(teamCount / spec.teamsPerDebate);
+  const minJudgesRequired = requiredRooms * spec.minJudgesPerRoom;
 
   if (judgeCount < minJudgesRequired) {
     validations.push({
       type: 'error',
       message: 'Insufficient judges',
       details: [
-        `Need ${minJudgesRequired} judges minimum (${formatSpec.adjudication.minJudges} per room)`,
+        `Need ${minJudgesRequired} judges minimum (${spec.minJudgesPerRoom} per room)`,
         `You have ${judgeCount} judges`,
         `${requiredRooms} rooms required`
-      ]
-    });
-  } else if (judgeCount > maxJudgesRecommended) {
-    validations.push({
-      type: 'warning',
-      message: 'More judges than recommended',
-      details: [
-        `Recommended maximum: ${maxJudgesRecommended} judges`,
-        `You have ${judgeCount} judges`,
-        'Consider using panels or backup judges'
       ]
     });
   } else {
@@ -85,13 +107,12 @@ function validateTournamentSetup(
   }
 
   // Round count validation
-  const maxRoundsPerDay = formatSpec.scheduling.roundsPerDay;
-  if (roundCount > maxRoundsPerDay) {
+  if (roundCount > spec.maxRoundsPerDay) {
     validations.push({
       type: 'warning',
       message: 'High number of rounds',
       details: [
-        `${roundCount} rounds exceeds recommended ${maxRoundsPerDay} per day`,
+        `${roundCount} rounds exceeds recommended ${spec.maxRoundsPerDay} per day`,
         'Consider spreading across multiple days',
         'Participants may experience fatigue'
       ]
@@ -105,7 +126,7 @@ function validateTournamentSetup(
   }
 
   // Format-specific validations
-  if (formatSpec.teamsPerDebate === 4 && teamCount % 4 !== 0) {
+  if (format === 'bp' && teamCount % 4 !== 0) {
     const remainder = teamCount % 4;
     validations.push({
       type: 'warning',
@@ -117,7 +138,7 @@ function validateTournamentSetup(
     });
   }
 
-  if (formatSpec.teamsPerDebate === 2 && teamCount % 2 !== 0) {
+  if ((format === 'wsdc' || format === 'ap') && teamCount % 2 !== 0) {
     validations.push({
       type: 'warning',
       message: 'Odd number of teams',
@@ -125,25 +146,6 @@ function validateTournamentSetup(
         '1 team will sit out each round',
         'Consider adding or removing one team'
       ]
-    });
-  }
-
-  // Tournament duration validation
-  const duration = FormatUtils.calculateTournamentDuration(formatSpec.name.toLowerCase(), roundCount);
-  if (duration.hours > 12) {
-    validations.push({
-      type: 'warning',
-      message: 'Very long tournament',
-      details: [
-        `Estimated duration: ${duration.hours}h ${duration.minutes}m`,
-        'Consider reducing rounds or extending to multiple days'
-      ]
-    });
-  } else {
-    validations.push({
-      type: 'info',
-      message: 'Tournament duration',
-      details: [`Estimated duration: ${duration.hours}h ${duration.minutes}m`]
     });
   }
 
@@ -161,8 +163,7 @@ export const FormatConstraintsValidator = React.memo<FormatConstraintsValidatorP
   roundCount,
   className
 }) => {
-  const formatConfig = DEBATE_FORMATS[format];
-  const validations = validateTournamentSetup(formatConfig, teamCount, judgeCount, roundCount);
+  const validations = validateTournamentSetup(format, teamCount, judgeCount, roundCount);
 
   const getIcon = (type: ValidationResult['type']) => {
     switch (type) {
@@ -216,7 +217,11 @@ export const FormatConstraintsValidator = React.memo<FormatConstraintsValidatorP
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Format:</span>
-                <div className="font-medium">{formatConfig.name}</div>
+                <div className="font-medium">
+                  {format === 'bp' ? 'British Parliamentary' : 
+                   format === 'wsdc' ? 'World Schools' : 
+                   format === 'ap' ? 'American Parliamentary' : format}
+                </div>
               </div>
               <div>
                 <span className="text-gray-600">Teams:</span>

@@ -1,6 +1,6 @@
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -26,6 +26,10 @@ import {
   LazyConfirmation,
   LazyPublicTournament,
 } from "@/components/optimized/LazyRoutes";
+
+// Ballot components
+import { JudgeBallotView } from "@/components/ballot/JudgeBallotView";
+import { BallotSuccessPage } from "@/components/ballot/BallotSuccessPage";
 
 // Static imports for critical pages
 import Index from "./pages/Index";
@@ -82,6 +86,10 @@ function App() {
                 
                 {/* Public tournament access */}
                 <Route path="/public/tournament/:token" element={<LazyPublicTournament />} />
+                
+                {/* Ballot routes */}
+                <Route path="/ballot/:token" element={<JudgeBallotView />} />
+                <Route path="/ballot/success" element={<BallotSuccessPage />} />
                 
                 {/* Protected routes - lazy loaded */}
                 <Route path="/dashboard" element={

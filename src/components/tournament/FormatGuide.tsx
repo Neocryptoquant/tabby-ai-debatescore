@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Users, Trophy, Settings, BookOpen, Gavel } from 'lucide-react';
-import { DebateFormat, DEBATE_FORMATS } from '@/types/formats';
+import { DebateFormat } from '@/types/tournament';
 
 interface FormatGuideProps {
   format: DebateFormat;
@@ -18,7 +18,89 @@ export const FormatGuide = React.memo<FormatGuideProps>(({
   format,
   className
 }) => {
-  const formatSpec = DEBATE_FORMATS[format];
+  // Format specifications
+  const formatSpecs = {
+    bp: {
+      name: 'British Parliamentary',
+      description: 'Four-team format with Opening and Closing Government/Opposition',
+      teamRoles: [
+        { name: 'Opening Government', time: '7min', description: 'Defines the motion and presents the government case' },
+        { name: 'Opening Opposition', time: '8min', description: 'Refutes government case and presents opposition' },
+        { name: 'Closing Government', time: '8min', description: 'Extends government case with new material' },
+        { name: 'Closing Opposition', time: '7min', description: 'Extends opposition case and provides summary' }
+      ],
+      scoring: {
+        teamScoring: { win: 3, loss: 0, draw: 1 },
+        speakerScoring: { min: 60, max: 80, avg: 75 }
+      },
+      adjudication: {
+        minJudges: 1,
+        maxJudges: 5,
+        panelComposition: 'Odd number preferred',
+        conflictRules: ['institution', 'coaching', 'personal']
+      },
+      roomSetup: {
+        seating: 'Parliamentary (opposing benches)',
+        equipment: ['Timer', 'Bell', 'Water']
+      }
+    },
+    wsdc: {
+      name: 'World Schools',
+      description: 'Three-speaker format with prepared and impromptu motions',
+      teamRoles: [
+        { name: 'First Proposition', time: '8min', description: 'Defines the motion and presents the proposition case' },
+        { name: 'First Opposition', time: '8min', description: 'Refutes proposition case and presents opposition' },
+        { name: 'Second Proposition', time: '8min', description: 'Rebuilds proposition case and extends arguments' },
+        { name: 'Second Opposition', time: '8min', description: 'Rebuilds opposition case and extends arguments' },
+        { name: 'Third Proposition', time: '8min', description: 'Crystallizes debate and summarizes proposition' },
+        { name: 'Third Opposition', time: '8min', description: 'Crystallizes debate and summarizes opposition' },
+        { name: 'Reply Speech (Opp)', time: '4min', description: 'Biased adjudication of the debate' },
+        { name: 'Reply Speech (Prop)', time: '4min', description: 'Biased adjudication of the debate' }
+      ],
+      scoring: {
+        teamScoring: { win: 1, loss: 0 },
+        speakerScoring: { min: 60, max: 80, avg: 75 }
+      },
+      adjudication: {
+        minJudges: 1,
+        maxJudges: 3,
+        panelComposition: 'Odd number required',
+        conflictRules: ['nationality', 'institution', 'coaching']
+      },
+      roomSetup: {
+        seating: 'Traditional (facing each other)',
+        equipment: ['Timer', 'Bell', 'Water', 'POI cards']
+      }
+    },
+    ap: {
+      name: 'American Parliamentary',
+      description: 'Two-team format with government and opposition',
+      teamRoles: [
+        { name: 'Prime Minister', time: '7min', description: 'Defines the resolution and presents the government case' },
+        { name: 'Leader of Opposition', time: '8min', description: 'Refutes government case and presents opposition' },
+        { name: 'Member of Government', time: '8min', description: 'Rebuilds and extends government case' },
+        { name: 'Member of Opposition', time: '8min', description: 'Rebuilds and extends opposition case' },
+        { name: 'Leader of Opposition Rebuttal', time: '4min', description: 'Summarizes opposition case' },
+        { name: 'Prime Minister Rebuttal', time: '5min', description: 'Summarizes government case' }
+      ],
+      scoring: {
+        teamScoring: { win: 1, loss: 0 },
+        speakerScoring: { min: 20, max: 30, avg: 25 }
+      },
+      adjudication: {
+        minJudges: 1,
+        maxJudges: 3,
+        panelComposition: 'Odd number preferred',
+        conflictRules: ['institution', 'coaching']
+      },
+      roomSetup: {
+        seating: 'Parliamentary style',
+        equipment: ['Timer', 'Bell', 'Water']
+      }
+    }
+  };
+  
+  const formatSpec = formatSpecs[format] || formatSpecs.bp;
 
   const formatTabs = [
     {
@@ -36,22 +118,26 @@ export const FormatGuide = React.memo<FormatGuideProps>(({
             <div className="text-center p-3 bg-gray-50 rounded-lg">
               <Users className="h-6 w-6 mx-auto mb-2 text-blue-600" />
               <div className="text-sm text-gray-600">Teams per Debate</div>
-              <div className="font-bold">{formatSpec.teamsPerDebate}</div>
+              <div className="font-bold">{format === 'bp' ? 4 : 2}</div>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
               <Users className="h-6 w-6 mx-auto mb-2 text-green-600" />
               <div className="text-sm text-gray-600">Speakers per Team</div>
-              <div className="font-bold">{formatSpec.speakersPerTeam}</div>
+              <div className="font-bold">{format === 'wsdc' ? 3 : 2}</div>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
               <Clock className="h-6 w-6 mx-auto mb-2 text-purple-600" />
               <div className="text-sm text-gray-600">Total Time</div>
-              <div className="font-bold">{formatSpec.totalSpeakingTime.minutes}min</div>
+              <div className="font-bold">
+                {format === 'bp' ? '30min' : format === 'wsdc' ? '52min' : '40min'}
+              </div>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
               <Trophy className="h-6 w-6 mx-auto mb-2 text-orange-600" />
               <div className="text-sm text-gray-600">Prep Time</div>
-              <div className="font-bold">{formatSpec.motions.preparationTime}min</div>
+              <div className="font-bold">
+                {format === 'bp' ? '15min' : format === 'wsdc' ? '60min' : '20min'}
+              </div>
             </div>
           </div>
         </div>
@@ -72,12 +158,7 @@ export const FormatGuide = React.memo<FormatGuideProps>(({
                   <div className="text-sm text-gray-600">{role.description}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold">{role.speakingTime.minutes}:{role.speakingTime.seconds.toString().padStart(2, '0')}</div>
-                  {role.speakingTime.protected && (
-                    <div className="text-xs text-gray-500">
-                      Protected: {role.speakingTime.protected}s
-                    </div>
-                  )}
+                  <div className="font-bold">{role.time}</div>
                 </div>
               </div>
             ))}
@@ -97,16 +178,16 @@ export const FormatGuide = React.memo<FormatGuideProps>(({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Win:</span>
-                  <span className="font-medium">{formatSpec.scoring.teamScoring.winPoints} points</span>
+                  <span className="font-medium">{formatSpec.scoring.teamScoring.win} points</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Loss:</span>
-                  <span className="font-medium">{formatSpec.scoring.teamScoring.lossPoints} points</span>
+                  <span className="font-medium">{formatSpec.scoring.teamScoring.loss} points</span>
                 </div>
-                {formatSpec.scoring.teamScoring.drawPoints && (
+                {formatSpec.scoring.teamScoring.draw && (
                   <div className="flex justify-between">
                     <span>Draw:</span>
-                    <span className="font-medium">{formatSpec.scoring.teamScoring.drawPoints} points</span>
+                    <span className="font-medium">{formatSpec.scoring.teamScoring.draw} points</span>
                   </div>
                 )}
               </div>
@@ -118,29 +199,14 @@ export const FormatGuide = React.memo<FormatGuideProps>(({
                 <div className="flex justify-between">
                   <span>Range:</span>
                   <span className="font-medium">
-                    {formatSpec.scoring.speakerScoring.minSpeakerScore}-{formatSpec.scoring.speakerScoring.maxSpeakerScore}
+                    {formatSpec.scoring.speakerScoring.min}-{formatSpec.scoring.speakerScoring.max}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Average:</span>
-                  <span className="font-medium">{formatSpec.scoring.speakerScoring.averageExpected}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Increment:</span>
-                  <span className="font-medium">{formatSpec.scoring.speakerScoring.increment}</span>
+                  <span className="font-medium">{formatSpec.scoring.speakerScoring.avg}</span>
                 </div>
               </div>
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold mb-3">Judging Criteria</h4>
-            <div className="flex flex-wrap gap-2">
-              {formatSpec.scoring.judgeScoring.scoringCriteria.map((criterion, index) => (
-                <Badge key={index} variant="outline">
-                  {criterion.replace('_', ' ').toUpperCase()}
-                </Badge>
-              ))}
             </div>
           </div>
         </div>
@@ -175,13 +241,15 @@ export const FormatGuide = React.memo<FormatGuideProps>(({
               <h4 className="font-semibold mb-3">Room Setup</h4>
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="font-medium">Seating:</span> {formatSpec.roomSetup.seatingArrangement}
+                  <span className="font-medium">Seating:</span> {formatSpec.roomSetup.seating}
                 </div>
                 <div>
-                  <span className="font-medium">Timekeeper:</span> {formatSpec.roomSetup.timekeeper ? 'Required' : 'Optional'}
-                </div>
-                <div>
-                  <span className="font-medium">Chair:</span> {formatSpec.roomSetup.chairRequired ? 'Required' : 'Optional'}
+                  <span className="font-medium">Equipment:</span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {formatSpec.roomSetup.equipment.map((item, index) => (
+                      <Badge key={index} variant="outline">{item}</Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -192,27 +260,7 @@ export const FormatGuide = React.memo<FormatGuideProps>(({
             <div className="flex flex-wrap gap-2">
               {formatSpec.adjudication.conflictRules.map((rule, index) => (
                 <Badge key={index} variant="outline" className="bg-red-50 text-red-700">
-                  {rule.replace('_', ' ').toUpperCase()}
-                </Badge>
-              ))}
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold mb-3">Experience Requirements</h4>
-            <ul className="list-disc list-inside space-y-1 text-sm">
-              {formatSpec.adjudication.experienceRequirements.map((req, index) => (
-                <li key={index}>{req}</li>
-              ))}
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold mb-3">Required Equipment</h4>
-            <div className="flex flex-wrap gap-2">
-              {formatSpec.roomSetup.requiredEquipment.map((equipment, index) => (
-                <Badge key={index} variant="outline" className="bg-blue-50 text-blue-700">
-                  {equipment}
+                  {rule.toUpperCase()}
                 </Badge>
               ))}
             </div>
@@ -226,87 +274,40 @@ export const FormatGuide = React.memo<FormatGuideProps>(({
       icon: Settings,
       content: (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-semibold mb-3">Scheduling</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Rounds per Day:</span>
-                  <span className="font-medium">{formatSpec.scheduling.roundsPerDay}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Time Between Rounds:</span>
-                  <span className="font-medium">{formatSpec.scheduling.timeBetweenRounds} min</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Debate Length:</span>
-                  <span className="font-medium">{formatSpec.scheduling.debateLength} min</span>
-                </div>
-              </div>
-            </div>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="font-medium mb-3">Format-Specific Recommendations</h4>
             
-            <div>
-              <h4 className="font-semibold mb-3">Tournament Limits</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Min Teams:</span>
-                  <span className="font-medium">{formatSpec.drawRules.minTeamsForTournament}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Max Teams:</span>
-                  <span className="font-medium">{formatSpec.drawRules.maxTeamsForTournament}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Default Break:</span>
-                  <span className="font-medium">{formatSpec.breakStructure.defaultBreakSize} teams</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold mb-3">Motion Types</h4>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {formatSpec.motions.types.map((type, index) => (
-                <Badge key={index} variant="outline" className="bg-green-50 text-green-700">
-                  {type}
-                </Badge>
-              ))}
-            </div>
-            <div className="text-sm space-y-1">
-              <div><span className="font-medium">Preparation Time:</span> {formatSpec.motions.preparationTime} minutes</div>
-              <div><span className="font-medium">Information Slide:</span> {formatSpec.motions.informationSlide ? 'Yes' : 'No'}</div>
-              <div><span className="font-medium">Motion Release:</span> {formatSpec.motions.motionRelease.replace('_', ' ')}</div>
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold mb-3">Break Structure</h4>
-            <div className="space-y-3">
-              <div>
-                <span className="font-medium">Supported Breaks:</span>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {formatSpec.breakStructure.supportedBreaks.map((breakType, index) => (
-                    <Badge key={index} variant="outline">
-                      {breakType.replace('_', ' ').toUpperCase()}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <span className="font-medium">Qualification:</span> {formatSpec.breakStructure.qualificationCriteria.replace('_', ' ')}
-              </div>
-              <div>
-                <span className="font-medium">Tie Breakers:</span>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {formatSpec.breakStructure.tieBreakers.map((tieBreaker, index) => (
-                    <Badge key={index} variant="outline" className="bg-yellow-50 text-yellow-700">
-                      {tieBreaker.replace('_', ' ').toUpperCase()}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
+            {format === 'bp' && (
+              <ul className="list-disc list-inside space-y-2 text-sm">
+                <li>Team count should be a multiple of 4 for optimal room allocation</li>
+                <li>Typically 5-6 preliminary rounds before breaks</li>
+                <li>Standard break sizes: 8 teams (quarterfinals), 16 teams (octofinals)</li>
+                <li>Teams ranked by points first, then speaker scores</li>
+                <li>Points: 1st = 3, 2nd = 2, 3rd = 1, 4th = 0</li>
+              </ul>
+            )}
+            
+            {format === 'wsdc' && (
+              <ul className="list-disc list-inside space-y-2 text-sm">
+                <li>Team count should be even for optimal pairing</li>
+                <li>Typically 8 preliminary rounds (4 prepared, 4 impromptu)</li>
+                <li>Standard break size: 8 teams (quarterfinals)</li>
+                <li>Teams ranked by wins first, then speaker scores</li>
+                <li>Three speakers per team plus optional reply speakers</li>
+                <li>POIs allowed during middle 6 minutes of speeches</li>
+              </ul>
+            )}
+            
+            {format === 'ap' && (
+              <ul className="list-disc list-inside space-y-2 text-sm">
+                <li>Team count should be even for optimal pairing</li>
+                <li>Typically 5-7 preliminary rounds</li>
+                <li>Standard break size: 8 teams (quarterfinals)</li>
+                <li>Teams ranked by wins first, then speaker scores</li>
+                <li>Government team defines the resolution</li>
+                <li>POIs allowed during speeches except first/last minute</li>
+              </ul>
+            )}
           </div>
         </div>
       )
