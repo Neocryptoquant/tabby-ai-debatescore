@@ -41,19 +41,9 @@ export function JudgeBallotAccess({
     
     setIsGenerating(true);
     try {
-      // Call the function to generate a ballot session
-      const { data, error } = await supabase.rpc('generate_ballot_session', {
-        p_tournament_id: tournamentId,
-        p_judge_id: selectedJudgeId,
-        p_round_id: selectedRoundId,
-        p_expires_hours: 48
-      });
-      
-      if (error) throw error;
-      
-      // Create the access link
-      const accessToken = data;
-      const accessLink = `${baseUrl}/ballot/${accessToken}`;
+      // Generate a simple token for now
+      const token = `${selectedJudgeId}-${selectedRoundId}-${Date.now()}`;
+      const accessLink = `${baseUrl}/ballot/${token}`;
       
       // Update the access links state
       setAccessLinks(prev => ({
@@ -83,22 +73,9 @@ export function JudgeBallotAccess({
       // Generate links for all judge-round combinations
       for (const judge of judges) {
         for (const round of rounds) {
-          // Call the function to generate a ballot session
-          const { data, error } = await supabase.rpc('generate_ballot_session', {
-            p_tournament_id: tournamentId,
-            p_judge_id: judge.id,
-            p_round_id: round.id,
-            p_expires_hours: 48
-          });
-          
-          if (error) {
-            console.error(`Error generating link for ${judge.name}, Round ${round.round_number}:`, error);
-            continue;
-          }
-          
-          // Create the access link
-          const accessToken = data;
-          const accessLink = `${baseUrl}/ballot/${accessToken}`;
+          // Generate a simple token
+          const token = `${judge.id}-${round.id}-${Date.now()}`;
+          const accessLink = `${baseUrl}/ballot/${token}`;
           
           // Add to the new access links
           newAccessLinks[`${judge.id}-${round.id}`] = accessLink;

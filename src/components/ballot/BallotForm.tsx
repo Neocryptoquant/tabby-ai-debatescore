@@ -12,10 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { Team, Judge, Draw, Round } from '@/types/tournament';
-import { DebateFormat, DEBATE_FORMATS } from '@/types/formats';
-import { Gavel, Save, CheckCircle, AlertTriangle, Users, Star, MessageSquare } from 'lucide-react';
+import { Team } from '@/types/tournament';
+import { Gavel, Save, CheckCircle, Users, Star, MessageSquare } from 'lucide-react';
 
 // Schema for speaker scores
 const speakerScoreSchema = z.object({
@@ -53,7 +51,7 @@ interface BallotFormProps {
   judgeId: string;
   roundId: string;
   tournamentId: string;
-  format: DebateFormat;
+  format: string;
   teams: Team[];
   onSubmit: (data: any) => Promise<void>;
   onCancel: () => void;
@@ -74,14 +72,8 @@ export function BallotForm({
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentTab, setCurrentTab] = useState('teams');
-  const [draw, setDraw] = useState<Draw | null>(null);
-  const [round, setRound] = useState<Round | null>(null);
-  const [judge, setJudge] = useState<Judge | null>(null);
-  const [existingBallot, setExistingBallot] = useState<any | null>(null);
   
-  const formatSpec = DEBATE_FORMATS[format];
-  
-  // Initialize form with default values based on format
+  // Initialize form with default values
   const form = useForm<BallotFormData>({
     resolver: zodResolver(ballotSchema),
     defaultValues: {
@@ -94,78 +86,8 @@ export function BallotForm({
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = form;
   
-  // Fetch draw, round, and judge data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch draw details
-        const { data: drawData, error: drawError } = await supabase
-          .from('draws')
-          .select('*')
-          .eq('id', drawId)
-          .single();
-          
-        if (drawError) throw drawError;
-        setDraw(drawData);
-        
-        // Fetch round details
-        const { data: roundData, error: roundError } = await supabase
-          .from('rounds')
-          .select('*')
-          .eq('id', roundId)
-          .single();
-          
-        if (roundError) throw roundError;
-        setRound(roundData);
-        
-        // Fetch judge details
-        const { data: judgeData, error: judgeError } = await supabase
-          .from('judges')
-          .select('*')
-          .eq('id', judgeId)
-          .single();
-          
-        if (judgeError) throw judgeError;
-        setJudge(judgeData);
-        
-        // Check for existing ballot
-        const { data: ballotData, error: ballotError } = await supabase
-          .from('ballots')
-          .select(`
-            *,
-            speaker_scores(*)
-          `)
-          .eq('draw_id', drawId)
-          .eq('judge_id', judgeId)
-          .maybeSingle();
-          
-        if (ballotError && ballotError.code !== 'PGRST116') throw ballotError;
-        
-        if (ballotData) {
-          setExistingBallot(ballotData);
-          
-          // Populate form with existing data
-          // This would need to be expanded based on your actual data structure
-          setValue('general_feedback', ballotData.general_feedback || '');
-          setValue('debate_quality', ballotData.debate_quality_score || 5);
-          setValue('notes_to_tab', ballotData.notes || '');
-          
-          // TODO: Populate team rankings and speaker scores
-        } else {
-          // Initialize with empty data
-          initializeFormData();
-        }
-      } catch (error) {
-        console.error('Error fetching ballot data:', error);
-        toast.error('Failed to load ballot data');
-      }
-    };
-    
-    fetchData();
-  }, [drawId, judgeId, roundId]);
-  
   // Initialize form data based on teams and format
-  const initializeFormData = () => {
+  useEffect(() => {
     if (!teams || teams.length === 0) return;
     
     // Map teams to positions based on format
@@ -178,14 +100,14 @@ export function BallotForm({
       const position = index < teamPositions.length ? teamPositions[index] : 'Unknown';
       
       // Create speaker entries based on format
-      const speakersPerTeam = formatSpec.speakersPerTeam;
+      const speakersPerTeam = format === 'wsdc' ? 3 : 2;
       const speakerScores = [];
       
       // Add speaker 1
       if (team.speaker_1) {
         speakerScores.push({
           speaker_name: team.speaker_1,
-          score: formatSpec.scoring.speakerScoring.averageExpected,
+          score: 75,
           content_score: 5,
           style_score: 5,
           strategy_score: 5,
@@ -197,7 +119,7 @@ export function BallotForm({
       if (team.speaker_2) {
         speakerScores.push({
           speaker_name: team.speaker_2,
-          score: formatSpec.scoring.speakerScoring.averageExpected,
+          score: 75,
           content_score: 5,
           style_score: 5,
           strategy_score: 5,
@@ -209,7 +131,7 @@ export function BallotForm({
       if (speakersPerTeam >= 3 && team.speaker_3) {
         speakerScores.push({
           speaker_name: team.speaker_3,
-          score: formatSpec.scoring.speakerScoring.averageExpected,
+          score: 75,
           content_score: 5,
           style_score: 5,
           strategy_score: 5,
@@ -222,13 +144,13 @@ export function BallotForm({
         name: team.name,
         position,
         rank: index + 1, // Default rank based on position
-        points: formatSpec.scoring.teamScoring.winPoints - index, // Default points based on rank
+        points: 3 - index, // Default points based on rank
         speaker_scores: speakerScores
       };
     });
     
     setValue('teams', formTeams);
-  };
+  }, [teams, format, setValue]);
   
   const handleFormSubmit = async (data: BallotFormData, isDraft: boolean = false) => {
     try {
@@ -268,80 +190,10 @@ export function BallotForm({
         notes: data.notes_to_tab
       };
       
-      // Insert or update ballot
-      let ballotId;
-      if (existingBallot) {
-        // Update existing ballot
-        const { data: updatedBallot, error: updateError } = await supabase
-          .from('ballots')
-          .update(ballotData)
-          .eq('id', existingBallot.id)
-          .select()
-          .single();
-          
-        if (updateError) throw updateError;
-        ballotId = existingBallot.id;
-      } else {
-        // Insert new ballot
-        const { data: newBallot, error: insertError } = await supabase
-          .from('ballots')
-          .insert(ballotData)
-          .select()
-          .single();
-          
-        if (insertError) throw insertError;
-        ballotId = newBallot.id;
-      }
-      
-      // Process speaker scores
-      const speakerScorePromises = [];
-      for (const team of data.teams) {
-        for (const speaker of team.speaker_scores) {
-          const speakerData = {
-            ballot_id: ballotId,
-            team_id: team.id,
-            speaker_name: speaker.speaker_name,
-            speaker_position: team.speaker_scores.indexOf(speaker) + 1,
-            team_position: team.position,
-            score: speaker.score,
-            content_score: speaker.content_score,
-            style_score: speaker.style_score,
-            strategy_score: speaker.strategy_score,
-            specific_feedback: speaker.feedback
-          };
-          
-          // Insert or update speaker score
-          if (speaker.id) {
-            speakerScorePromises.push(
-              supabase
-                .from('speaker_scores')
-                .update(speakerData)
-                .eq('id', speaker.id)
-            );
-          } else {
-            speakerScorePromises.push(
-              supabase
-                .from('speaker_scores')
-                .insert(speakerData)
-            );
-          }
-        }
-      }
-      
-      await Promise.all(speakerScorePromises);
-      
-      // Update draw status if submitting (not draft)
-      if (!isDraft) {
-        await supabase
-          .from('draws')
-          .update({ status: 'in_progress' })
-          .eq('id', drawId);
-      }
-      
-      toast.success(isDraft ? 'Ballot saved as draft' : 'Ballot submitted successfully');
-      
       // Call the onSubmit callback
       await onSubmit(ballotData);
+      
+      toast.success(isDraft ? 'Ballot saved as draft' : 'Ballot submitted successfully');
     } catch (error) {
       console.error('Error submitting ballot:', error);
       toast.error('Failed to submit ballot');
@@ -376,20 +228,6 @@ export function BallotForm({
             <Gavel className="h-5 w-5" />
             {format.toUpperCase()} Ballot
           </CardTitle>
-          <CardDescription>
-            {round?.motion && (
-              <div className="mt-2">
-                <div className="font-medium">Motion:</div>
-                <div className="text-sm">{round.motion}</div>
-                {round.info_slide && (
-                  <div className="mt-2">
-                    <div className="font-medium">Info Slide:</div>
-                    <div className="text-sm">{round.info_slide}</div>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={currentTab} onValueChange={setCurrentTab}>
@@ -432,7 +270,7 @@ export function BallotForm({
                               onValueChange={(value) => {
                                 setValue(`teams.${index}.rank`, parseInt(value));
                                 // Update points based on rank
-                                const points = formatSpec.scoring.teamScoring.winPoints - (parseInt(value) - 1);
+                                const points = 4 - parseInt(value);
                                 setValue(`teams.${index}.points`, Math.max(0, points));
                               }}
                             >
@@ -469,8 +307,7 @@ export function BallotForm({
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Speaker Scores</h3>
                 <p className="text-sm text-gray-500">
-                  Score each speaker from {formatSpec.scoring.speakerScoring.minSpeakerScore} to {formatSpec.scoring.speakerScoring.maxSpeakerScore}.
-                  The average is typically around {formatSpec.scoring.speakerScoring.averageExpected}.
+                  Score each speaker from 50 to 100. The average is typically around 75.
                 </p>
                 
                 {/* Speaker scores by team */}
@@ -501,9 +338,9 @@ export function BallotForm({
                               <Input
                                 id={`teams.${teamIndex}.speaker_scores.${speakerIndex}.score`}
                                 type="number"
-                                min={formatSpec.scoring.speakerScoring.minSpeakerScore}
-                                max={formatSpec.scoring.speakerScoring.maxSpeakerScore}
-                                step={formatSpec.scoring.speakerScoring.increment}
+                                min={50}
+                                max={100}
+                                step={1}
                                 {...register(`teams.${teamIndex}.speaker_scores.${speakerIndex}.score` as any, { valueAsNumber: true })}
                               />
                             </div>

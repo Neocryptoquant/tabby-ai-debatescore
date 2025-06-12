@@ -52,7 +52,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .from('profiles')
         .select('id')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
         console.error('Error checking existing profile:', fetchError);
@@ -76,6 +76,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } else {
           console.log('Profile created successfully for user:', user.id);
         }
+      } else {
+        // Update existing profile with email if needed
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            email: user.email,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+          
+        if (updateError) {
+          console.error('Error updating profile email:', updateError);
+        }
       }
     } catch (error) {
       console.error('Error in createOrUpdateProfile:', error);
@@ -87,9 +100,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const initializeAuth = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
-        console.log('Initial session:', initialSession?.user?.email);
         
         if (initialSession) {
+          console.log('Initial session:', initialSession?.user?.email);
           setSession(initialSession);
           setUser(initialSession.user);
           
@@ -111,12 +124,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       async (event, newSession) => {
         console.log('Auth state changed:', event, newSession?.user?.email);
         
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        
-        // Create profile for new users
-        if (event === 'SIGNED_IN' && newSession?.user) {
-          await createOrUpdateProfile(newSession.user);
+        if (newSession?.user) {
+          setSession(newSession);
+          setUser(newSession.user);
+          
+          // Create profile for new users
+          if (event === 'SIGNED_IN') {
+            await createOrUpdateProfile(newSession.user);
+          }
+        } else {
+          setSession(null);
+          setUser(null);
         }
         
         setIsLoading(false);
