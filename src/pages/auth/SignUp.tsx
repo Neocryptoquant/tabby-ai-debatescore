@@ -64,8 +64,6 @@ const SignUp = () => {
       }
     } catch (error) {
       console.error("Google login error:", error);
-    } finally {
-      // This might not run if we're redirected
       setGoogleLoading(false);
     }
   };

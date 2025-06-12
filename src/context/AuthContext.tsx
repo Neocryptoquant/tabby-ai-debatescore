@@ -83,35 +83,45 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
   
   useEffect(() => {
-    // Set up auth state listener
+    // First check for existing session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        console.log('Initial session:', initialSession?.user?.email);
+        
+        if (initialSession) {
+          setSession(initialSession);
+          setUser(initialSession.user);
+          
+          // Create/update profile if user exists
+          await createOrUpdateProfile(initialSession.user);
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    initializeAuth();
+    
+    // Then set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
+      async (event, newSession) => {
+        console.log('Auth state changed:', event, newSession?.user?.email);
+        
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
         
         // Create profile for new users
-        if (event === 'SIGNED_IN' && session?.user) {
-          await createOrUpdateProfile(session.user);
+        if (event === 'SIGNED_IN' && newSession?.user) {
+          await createOrUpdateProfile(newSession.user);
         }
         
         setIsLoading(false);
       }
     );
-    
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      // Create/update profile if user exists
-      if (session?.user) {
-        createOrUpdateProfile(session.user);
-      }
-      
-      setIsLoading(false);
-    });
     
     // Clean up subscription on unmount
     return () => {

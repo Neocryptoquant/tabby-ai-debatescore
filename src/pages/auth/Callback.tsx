@@ -17,7 +17,7 @@ const Callback = () => {
       try {
         setIsProcessing(true);
         
-        // Get the URL hash and handle the OAuth callback
+        // Get the session
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
