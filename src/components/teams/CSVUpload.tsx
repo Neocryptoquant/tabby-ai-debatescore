@@ -70,7 +70,7 @@ Harvard A,Harvard University,Robert Brown,Lisa Davis`;
     console.log("Header mapping:", headerMap);
     
     // Check if we have the minimum required headers
-    if (!headerMap['name']) {
+    if (teamNameIndex === -1) {
       throw new Error('Missing required column: team name');
     }
 
