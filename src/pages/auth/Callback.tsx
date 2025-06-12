@@ -5,6 +5,7 @@ import { BrainCircuit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const Callback = () => {
   const navigate = useNavigate();
@@ -55,12 +56,14 @@ const Callback = () => {
               
             if (insertError) {
               console.error("Error creating profile:", insertError);
+              toast.error("Error creating profile");
             } else {
               console.log("Profile created successfully");
             }
           }
           
           // Redirect to dashboard
+          toast.success("Signed in successfully!");
           navigate('/dashboard', { replace: true });
         } else {
           setError("No session found. Please try signing in again.");

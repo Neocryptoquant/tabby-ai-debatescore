@@ -41,7 +41,6 @@ const SignIn = () => {
       });
       
       if (success) {
-        toast.success("Signed in successfully!");
         navigate("/dashboard");
       } else if (error) {
         console.error("Sign in error:", error);
@@ -56,14 +55,7 @@ const SignIn = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const { data, error } = await signInWithProvider('google');
-      
-      if (error) {
-        console.error("Google login error:", error);
-        toast.error("Failed to sign in with Google");
-        setGoogleLoading(false);
-      }
-      
+      await signInWithProvider('google');
       // If successful, the redirect will happen automatically
       // We don't need to set googleLoading to false as the page will redirect
     } catch (error) {

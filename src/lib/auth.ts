@@ -26,6 +26,7 @@ export async function signInWithPassword({ email, password }: SignInWithPassword
       return { error };
     }
 
+    toast.success("Signed in successfully!");
     return { success: true, data };
   } catch (error) {
     console.error("Sign in error:", error);
@@ -94,6 +95,7 @@ export async function signOut() {
       return { error };
     }
     
+    toast.success("Signed out successfully");
     return { success: true };
   } catch (error) {
     console.error("Sign out error:", error);
