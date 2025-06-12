@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, FieldValues } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -11,7 +10,7 @@ import { X, Plus } from 'lucide-react';
 import { ExperienceLevel, BreakCategory } from '@/types/tournament';
 
 interface TournamentSettingsFormProps {
-  form: UseFormReturn<any>;
+  form: UseFormReturn<FieldValues>;
   breakCategories: BreakCategory[];
   setBreakCategories: (categories: BreakCategory[]) => void;
 }
@@ -36,7 +35,7 @@ export const TournamentSettingsForm: React.FC<TournamentSettingsFormProps> = ({
     setBreakCategories([...breakCategories, newCategory]);
   };
 
-  const updateBreakCategory = (index: number, field: keyof BreakCategory, value: any) => {
+  const updateBreakCategory = (index: number, field: keyof BreakCategory, value: string | number | undefined | ExperienceLevel[]) => {
     const updated = [...breakCategories];
     updated[index] = { ...updated[index], [field]: value };
     setBreakCategories(updated);

@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, TrendingUp, Users, Trophy, BarChart3, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
+import React from "react";
 
 interface Insight {
   id: string;
@@ -12,7 +12,7 @@ interface Insight {
   title: string;
   description: string;
   severity: 'low' | 'medium' | 'high';
-  icon: any;
+  icon: React.ElementType;
 }
 
 interface InsightsGeneratorProps {

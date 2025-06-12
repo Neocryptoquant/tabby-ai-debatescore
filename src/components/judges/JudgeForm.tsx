@@ -27,7 +27,7 @@ export const JudgeForm = ({ onSave, isLoading = false, defaultValues = {}, isEdi
   React.useEffect(() => {
     if (isEditMode && defaultValues) {
       Object.entries(defaultValues).forEach(([key, value]) => {
-        setValue(key as keyof JudgeFormData, value as any);
+        setValue(key as keyof JudgeFormData, value);
       });
     }
   }, [defaultValues, isEditMode, setValue]);

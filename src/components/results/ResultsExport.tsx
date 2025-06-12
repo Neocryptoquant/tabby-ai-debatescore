@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,7 +51,7 @@ export const ResultsExport = ({ tournamentId, tournamentName }: ResultsExportPro
     { id: '6', name: 'Lisa Davis', team: 'LSE Debaters', total_score: 243, average_score: 81.0, position: 6 },
   ];
 
-  const exportToCSV = (data: any[], filename: string) => {
+  const exportToCSV = <T extends Record<string, unknown>>(data: T[], filename: string) => {
     if (data.length === 0) return;
 
     const headers = Object.keys(data[0]);
