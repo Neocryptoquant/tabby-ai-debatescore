@@ -18,10 +18,12 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { AIAssistant } from "@/components/ai/AIAssistant";
 import { TournamentSettingsForm } from "@/components/forms/TournamentSettingsForm";
+import { FormatSelector } from "@/components/tournament/FormatSelector";
+import { FormatConstraintsValidator } from "@/components/tournament/FormatConstraintsValidator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import { BreakCategory } from "@/types/tournament";
+import { BreakCategory, DebateFormat } from "@/types/tournament";
 import {
   Card,
   CardContent,
@@ -45,24 +47,27 @@ const CreateTournament = () => {
   const { canCreateTournaments, isLoading: roleLoading } = useUserRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [breakCategories, setBreakCategories] = useState<BreakCategory[]>([]);
+  const [selectedFormat, setSelectedFormat] = useState<DebateFormat>('bp');
 
   const form = useForm({
     defaultValues: {
       name: "",
-      format: "",
+      format: "bp",
       startDate: "",
       endDate: "",
       location: "",
       description: "",
-      teamCount: "",
-      roundCount: "",
-      motionsPerRound: "",
+      teamCount: 16,
+      roundCount: 6,
+      motionsPerRound: 1,
       breakType: "none",
       useAI: true,
     },
   });
 
   const { register, handleSubmit, setValue, watch } = form;
+  const teamCount = parseInt(watch("teamCount") || "16");
+  const roundCount = parseInt(watch("roundCount") || "6");
 
   // Redirect if user cannot create tournaments
   if (!roleLoading && !canCreateTournaments && user) {
@@ -84,6 +89,11 @@ const CreateTournament = () => {
   
   const handleSelectChange = (name: string, value: string) => {
     setValue(name as any, value);
+  };
+
+  const handleFormatChange = (format: DebateFormat) => {
+    setSelectedFormat(format);
+    setValue("format", format);
   };
   
   const onSubmit = async (data: any) => {
@@ -172,26 +182,6 @@ const CreateTournament = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="format">Debate Format</Label>
-                    <Select 
-                      name="format" 
-                      value={watch("format")}
-                      onValueChange={(value) => handleSelectChange("format", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a format" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bp">British Parliamentary (BP)</SelectItem>
-                        <SelectItem value="wsdc">World Schools (WSDC)</SelectItem>
-                        <SelectItem value="apda">American Parliamentary</SelectItem>
-                        <SelectItem value="policy">Policy Debate</SelectItem>
-                        <SelectItem value="custom">Custom Format</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
                     <Label htmlFor="location">Location</Label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -245,11 +235,26 @@ const CreateTournament = () => {
               </CardContent>
             </Card>
             
+            {/* Format Selection */}
+            <FormatSelector 
+              selectedFormat={selectedFormat}
+              onFormatChange={handleFormatChange}
+              teamCount={teamCount}
+            />
+            
             {/* Tournament Structure with Break Categories */}
             <TournamentSettingsForm 
               form={form}
               breakCategories={breakCategories}
               setBreakCategories={setBreakCategories}
+            />
+            
+            {/* Format Constraints Validator */}
+            <FormatConstraintsValidator
+              format={selectedFormat}
+              teamCount={teamCount}
+              judgeCount={5} // Default value, could be made dynamic
+              roundCount={roundCount}
             />
           </div>
           
