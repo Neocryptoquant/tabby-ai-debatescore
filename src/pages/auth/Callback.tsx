@@ -1,30 +1,72 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { BrainCircuit, Loader2 } from "lucide-react";
+import { BrainCircuit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { Button } from "@/components/ui/button";
 
 const Callback = () => {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(true);
   
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Check for an OAuth session
-        const { error } = await supabase.auth.getSession();
+        setIsProcessing(true);
+        
+        // Get the URL hash and handle the OAuth callback
+        const { data, error } = await supabase.auth.getSession();
         
         if (error) {
+          console.error("Auth callback error:", error);
           setError(error.message);
           return;
         }
         
-        // If successful, redirect to dashboard
-        navigate('/dashboard', { replace: true });
+        if (data.session) {
+          console.log("Authentication successful");
+          
+          // Check if user profile exists, if not create it
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.session.user.id)
+            .maybeSingle();
+            
+          if (profileError && profileError.code !== 'PGRST116') {
+            console.error("Error checking profile:", profileError);
+          }
+          
+          if (!profile) {
+            // Create profile from user metadata
+            const { user_metadata } = data.session.user;
+            
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: data.session.user.id,
+                full_name: user_metadata?.full_name || user_metadata?.name || '',
+                avatar_url: user_metadata?.avatar_url || null,
+                email: data.session.user.email
+              });
+              
+            if (insertError) {
+              console.error("Error creating profile:", insertError);
+            }
+          }
+          
+          // Redirect to dashboard
+          navigate('/dashboard', { replace: true });
+        } else {
+          setError("No session found. Please try signing in again.");
+        }
       } catch (err) {
         console.error("Error during auth callback:", err);
         setError("An unexpected error occurred during login");
+      } finally {
+        setIsProcessing(false);
       }
     };
     
@@ -54,21 +96,23 @@ const Callback = () => {
           </CardHeader>
           
           <CardContent className="space-y-4 flex flex-col items-center justify-center min-h-[100px]">
-            {error ? (
+            {isProcessing ? (
+              <LoadingSpinner size="lg" text="Authenticating..." />
+            ) : error ? (
               <div className="text-red-500 text-center">{error}</div>
             ) : (
-              <Loader2 className="h-8 w-8 animate-spin text-tabby-secondary" />
+              <div className="text-green-500 text-center">Authentication successful! Redirecting...</div>
             )}
           </CardContent>
           
           {error && (
             <CardFooter>
-              <button 
+              <Button 
                 onClick={() => navigate('/auth/sign-in')}
-                className="w-full bg-tabby-secondary text-white py-2 rounded-md hover:bg-tabby-secondary/90"
+                className="w-full"
               >
                 Back to Sign In
-              </button>
+              </Button>
             </CardFooter>
           )}
         </Card>
