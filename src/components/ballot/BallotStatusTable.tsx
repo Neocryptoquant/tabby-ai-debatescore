@@ -179,7 +179,7 @@ export function BallotStatusTable({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {roundBallots.map((ballot) => (
+                    {Array.isArray(roundBallots) && roundBallots.map((ballot) => (
                       <TableRow key={ballot.id}>
                         <TableCell>{ballot.draw?.room || 'N/A'}</TableCell>
                         <TableCell>
