@@ -97,7 +97,7 @@ export function BallotStatusTable({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Rounds</SelectItem>
-            {rounds.map((round) => (
+            {Array.isArray(rounds) && rounds.map((round) => (
               <SelectItem key={round.id} value={round.id}>
                 Round {round.round_number}
               </SelectItem>
@@ -131,7 +131,7 @@ export function BallotStatusTable({
                   <div>
                     <h4 className="font-medium">Round {round.round_number}</h4>
                     <div className="text-sm text-gray-500 mt-1">
-                      {round.motion.substring(0, 50)}...
+                      {round.motion?.substring(0, 50)}...
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
