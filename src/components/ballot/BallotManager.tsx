@@ -1,15 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Judge, Round, Draw } from '@/types/tournament';
+import { Judge, Round, Draw, Team } from '@/types/tournament';
 import { JudgeBallotAccess } from './JudgeBallotAccess';
 import { BallotStatusTable } from './BallotStatusTable';
-import { Gavel, CheckCircle, AlertTriangle, Clock, RefreshCw, Trophy } from 'lucide-react';
+import { BallotEntryForm } from './BallotEntryForm';
+import { Gavel, CheckCircle, AlertTriangle, Clock, RefreshCw, Trophy, Plus } from 'lucide-react';
 
 interface BallotManagerProps {
   tournamentId: string;
@@ -28,6 +31,7 @@ export function BallotManager({
 }: BallotManagerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [ballots, setBallots] = useState<any[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [ballotStats, setBallotStats] = useState({
     total: 0,
     submitted: 0,
@@ -36,6 +40,24 @@ export function BallotManager({
     missing: 0
   });
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [showBallotEntry, setShowBallotEntry] = useState(false);
+  
+  // Fetch teams data
+  const fetchTeams = async () => {
+    if (!tournamentId) return;
+    
+    try {
+      const { data: teamsData, error } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('tournament_id', tournamentId);
+      
+      if (error) throw error;
+      setTeams(teamsData || []);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
+  };
   
   // Fetch ballots data
   const fetchBallots = async () => {
@@ -43,33 +65,25 @@ export function BallotManager({
     
     setIsLoading(true);
     try {
-      // For now, we'll use mock data since the ballots table might not be fully set up
-      const mockBallots = draws.map((draw, index) => ({
-        id: `mock-ballot-${index}`,
-        draw_id: draw.id,
-        judge_id: judges[index % judges.length]?.id,
-        status: ['draft', 'submitted', 'confirmed'][Math.floor(Math.random() * 3)],
-        submission_time: new Date().toISOString(),
-        draw: {
-          id: draw.id,
-          room: draw.room,
-          round_id: draw.round_id
-        },
-        judge: {
-          id: judges[index % judges.length]?.id,
-          name: judges[index % judges.length]?.name,
-          institution: judges[index % judges.length]?.institution
-        },
-        speaker_scores: []
-      }));
+      // Fetch real ballots from the database
+      const { data: ballotsData, error: ballotsError } = await supabase
+        .from('ballots')
+        .select(`
+          *,
+          draw:draws(*),
+          judge:judges(*)
+        `)
+        .eq('tournament_id', tournamentId);
       
-      setBallots(mockBallots);
+      if (ballotsError) throw ballotsError;
+      
+      setBallots(ballotsData || []);
       
       // Calculate stats
       const total = draws.length;
-      const submitted = mockBallots.filter(b => b.status === 'submitted').length;
-      const confirmed = mockBallots.filter(b => b.status === 'confirmed').length;
-      const draft = mockBallots.filter(b => b.status === 'draft').length;
+      const submitted = ballotsData?.filter(b => b.status === 'submitted').length || 0;
+      const confirmed = ballotsData?.filter(b => b.status === 'confirmed').length || 0;
+      const draft = ballotsData?.filter(b => b.status === 'draft').length || 0;
       const missing = total - submitted - confirmed - draft;
       
       setBallotStats({
@@ -77,7 +91,7 @@ export function BallotManager({
         submitted,
         confirmed,
         draft,
-        missing
+        missing: Math.max(0, missing)
       });
       
       setLastUpdated(new Date());
@@ -89,30 +103,27 @@ export function BallotManager({
     }
   };
   
-  // Fetch ballots on mount and when dependencies change
+  // Fetch data on mount and when dependencies change
   useEffect(() => {
+    fetchTeams();
     fetchBallots();
   }, [tournamentId, judges.length, rounds.length, draws.length]);
   
   // Confirm a ballot
   const confirmBallot = async (ballotId: string) => {
     try {
-      // In a real implementation, this would update the database
-      // For now, we'll just update the local state
-      setBallots(prev => prev.map(ballot => 
-        ballot.id === ballotId 
-          ? { ...ballot, status: 'confirmed' } 
-          : ballot
-      ));
+      const { error } = await supabase
+        .from('ballots')
+        .update({ 
+          status: 'confirmed',
+          confirmed_time: new Date().toISOString()
+        })
+        .eq('id', ballotId);
+      
+      if (error) throw error;
       
       toast.success('Ballot confirmed successfully');
-      
-      // Update stats
-      setBallotStats(prev => ({
-        ...prev,
-        confirmed: prev.confirmed + 1,
-        submitted: prev.submitted - 1
-      }));
+      fetchBallots(); // Refresh data
     } catch (error) {
       console.error('Error confirming ballot:', error);
       toast.error('Failed to confirm ballot');
@@ -122,27 +133,15 @@ export function BallotManager({
   // Discard a ballot
   const discardBallot = async (ballotId: string) => {
     try {
-      // In a real implementation, this would update the database
-      // For now, we'll just update the local state
-      const ballot = ballots.find(b => b.id === ballotId);
-      const oldStatus = ballot?.status;
+      const { error } = await supabase
+        .from('ballots')
+        .delete()
+        .eq('id', ballotId);
       
-      setBallots(prev => prev.map(ballot => 
-        ballot.id === ballotId 
-          ? { ...ballot, status: 'discarded' } 
-          : ballot
-      ));
+      if (error) throw error;
       
       toast.success('Ballot discarded');
-      
-      // Update stats
-      setBallotStats(prev => {
-        const newStats = { ...prev };
-        if (oldStatus === 'submitted') newStats.submitted -= 1;
-        if (oldStatus === 'confirmed') newStats.confirmed -= 1;
-        if (oldStatus === 'draft') newStats.draft -= 1;
-        return newStats;
-      });
+      fetchBallots(); // Refresh data
     } catch (error) {
       console.error('Error discarding ballot:', error);
       toast.error('Failed to discard ballot');
@@ -152,26 +151,27 @@ export function BallotManager({
   // Complete a round
   const completeRound = async (roundId: string) => {
     try {
-      toast.success('Round completed successfully');
+      // Use the Supabase function to complete the round
+      const { data, error } = await supabase.rpc('complete_round', {
+        p_round_id: roundId
+      });
+      
+      if (error) throw error;
+      
+      if (data) {
+        toast.success('Round completed successfully');
+        fetchBallots(); // Refresh data
+      } else {
+        toast.error('Cannot complete round - not all ballots are submitted');
+      }
     } catch (error) {
       console.error('Error completing round:', error);
       toast.error('Failed to complete round');
     }
   };
   
-  // Generate ballot access link
-  const generateBallotLink = async (judgeId: string, roundId: string) => {
-    try {
-      // Generate a simple token for now
-      const token = `${judgeId}-${roundId}-${Date.now()}`;
-      
-      // In a real implementation, this would be stored in the database
-      // For now, we'll just return the token
-      return `${window.location.origin}/ballot/${token}`;
-    } catch (error) {
-      console.error('Error generating ballot link:', error);
-      throw error;
-    }
+  const handleBallotEntrySuccess = () => {
+    fetchBallots(); // Refresh ballots data
   };
   
   return (
@@ -237,43 +237,29 @@ export function BallotManager({
                 
                 {/* Manual Ballot Entry */}
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-medium text-blue-900 mb-2">Manual Ballot Entry</h3>
-                  <p className="text-sm text-blue-800 mb-4">
-                    As a tab master, you can manually enter ballots for any judge and round.
-                  </p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center justify-between mb-4">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Select Round</label>
-                      <select className="w-full p-2 border rounded-md">
-                        <option value="">Select a round...</option>
-                        {rounds.map((round) => (
-                          <option key={round.id} value={round.id}>
-                            Round {round.round_number}
-                          </option>
-                        ))}
-                      </select>
+                      <h3 className="font-medium text-blue-900 mb-2">Manual Ballot Entry</h3>
+                      <p className="text-sm text-blue-800">
+                        As a tab master, you can manually enter ballots for any judge and round.
+                      </p>
                     </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Select Room</label>
-                      <select className="w-full p-2 border rounded-md">
-                        <option value="">Select a room...</option>
-                        {draws.map((draw) => (
-                          <option key={draw.id} value={draw.id}>
-                            {draw.room}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div className="flex items-end">
-                      <Button className="w-full">
-                        Enter Ballot
-                      </Button>
-                    </div>
+                    <Button 
+                      onClick={() => setShowBallotEntry(true)}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Enter Ballot
+                    </Button>
                   </div>
                 </div>
+                
+                {/* Ballots Table */}
+                <BallotStatusTable
+                  ballots={ballots}
+                  onConfirm={confirmBallot}
+                  onDiscard={discardBallot}
+                />
                 
                 <div className="text-xs text-gray-500 text-right">
                   Last updated: {lastUpdated.toLocaleTimeString()}
@@ -299,6 +285,10 @@ export function BallotManager({
                     <Button
                       variant="outline"
                       className="bg-white"
+                      onClick={() => {
+                        // TODO: Implement break generation
+                        toast.info('Break generation functionality coming soon!');
+                      }}
                     >
                       <Trophy className="h-4 w-4 mr-2" />
                       Quarterfinals (8 teams)
@@ -306,6 +296,10 @@ export function BallotManager({
                     <Button
                       variant="outline"
                       className="bg-white"
+                      onClick={() => {
+                        // TODO: Implement break generation
+                        toast.info('Break generation functionality coming soon!');
+                      }}
                     >
                       <Trophy className="h-4 w-4 mr-2" />
                       Semifinals (4 teams)
@@ -313,6 +307,10 @@ export function BallotManager({
                     <Button
                       variant="outline"
                       className="bg-white"
+                      onClick={() => {
+                        // TODO: Implement break generation
+                        toast.info('Break generation functionality coming soon!');
+                      }}
                     >
                       <Trophy className="h-4 w-4 mr-2" />
                       Finals (2 teams)
@@ -331,6 +329,21 @@ export function BallotManager({
           )}
         </CardContent>
       </Card>
+      
+      {/* Ballot Entry Dialog */}
+      <Dialog open={showBallotEntry} onOpenChange={setShowBallotEntry}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <BallotEntryForm
+            tournamentId={tournamentId}
+            judges={judges}
+            rounds={rounds}
+            draws={draws}
+            teams={teams}
+            onClose={() => setShowBallotEntry(false)}
+            onSuccess={handleBallotEntrySuccess}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

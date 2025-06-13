@@ -1,1 +1,58 @@
+
 project_id = "xzrgoudfoiwrytrdjozn"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 9999
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://xzrgoudfoiwrytrdjozn.supabase.co"]
+jwt_expiry = 3600
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[rest]
+enabled = true
+port = 3000
+
+[realtime]
+enabled = true
+port = 4000
+
+[studio]
+enabled = true
+port = 3001
+
+[inbucket]
+enabled = true
+port = 9000
+smtp_port = 2500
+pop3_port = 9995
+
+[storage]
+enabled = true
+port = 5000
+file_size_limit = "50MiB"
+
+[analytics]
+enabled = false
+
+[functions.generate-ballot-session]
+verify_jwt = false
+
+[functions.generate-tournament-breaks]
+verify_jwt = false
+
+[functions.complete-round]
+verify_jwt = false
