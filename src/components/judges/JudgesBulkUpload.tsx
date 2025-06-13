@@ -107,36 +107,48 @@ Lisa Davis,Stanford University,pro`;
       
       console.log(`Row ${i} values:`, values);
       
-      // Create judge object using the header mapping
-      const judge: Record<string, string> = {
+      // Create judge object with proper typing
+      const judgeData: Partial<JudgeData> = {
         name: '',
         institution: '',
-        experience_level: 'novice'
+        experience_level: 'novice' as ExperienceLevel
       };
       
       // Map values to the correct fields
       headers.forEach((header, index) => {
         if (headerMap[header] && index < values.length) {
-          judge[headerMap[header]] = values[index];
+          const mappedField = headerMap[header] as keyof JudgeData;
+          if (mappedField === 'experience_level') {
+            judgeData[mappedField] = values[index] as ExperienceLevel;
+          } else {
+            (judgeData as any)[mappedField] = values[index];
+          }
         }
       });
       
-      console.log(`Parsed judge:`, judge);
+      console.log(`Parsed judge:`, judgeData);
       
       // Validate judge
-      if (!judge.name) {
+      if (!judgeData.name) {
         errors.push(`Row ${i + 1}: Judge name is required`);
         continue;
       }
 
       // Validate experience level
       const validExperienceLevels: ExperienceLevel[] = ['novice', 'intermediate', 'open', 'pro'];
-      if (judge.experience_level && !validExperienceLevels.includes(judge.experience_level as ExperienceLevel)) {
-        judge.experience_level = 'novice'; // Default to novice if invalid
-        errors.push(`Row ${i + 1}: Invalid experience level for ${judge.name}, defaulting to novice`);
+      if (judgeData.experience_level && !validExperienceLevels.includes(judgeData.experience_level)) {
+        judgeData.experience_level = 'novice'; // Default to novice if invalid
+        errors.push(`Row ${i + 1}: Invalid experience level for ${judgeData.name}, defaulting to novice`);
       }
 
-      judges.push(judge as JudgeData);
+      // Ensure all required fields are present
+      const completeJudge: JudgeData = {
+        name: judgeData.name,
+        institution: judgeData.institution,
+        experience_level: judgeData.experience_level || 'novice'
+      };
+
+      judges.push(completeJudge);
     }
 
     if (errors.length > 0) {

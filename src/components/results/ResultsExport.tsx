@@ -51,7 +51,7 @@ export const ResultsExport = ({ tournamentId, tournamentName }: ResultsExportPro
     { id: '6', name: 'Lisa Davis', team: 'LSE Debaters', total_score: 243, average_score: 81.0, position: 6 },
   ];
 
-  const exportToCSV = <T extends Record<string, unknown>>(data: T[], filename: string) => {
+  const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
     if (data.length === 0) return;
 
     const headers = Object.keys(data[0]);
@@ -75,7 +75,7 @@ export const ResultsExport = ({ tournamentId, tournamentName }: ResultsExportPro
     setIsExporting(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      exportToCSV(teamStandings, 'team_standings');
+      exportToCSV(teamStandings as Record<string, unknown>[], 'team_standings');
       toast.success("Team standings exported successfully!");
     } catch (error) {
       toast.error("Failed to export team standings");
@@ -88,7 +88,7 @@ export const ResultsExport = ({ tournamentId, tournamentName }: ResultsExportPro
     setIsExporting(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      exportToCSV(speakerStandings, 'speaker_standings');
+      exportToCSV(speakerStandings as Record<string, unknown>[], 'speaker_standings');
       toast.success("Speaker standings exported successfully!");
     } catch (error) {
       toast.error("Failed to export speaker standings");
@@ -103,8 +103,8 @@ export const ResultsExport = ({ tournamentId, tournamentName }: ResultsExportPro
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Export multiple files
-      exportToCSV(teamStandings, 'team_standings');
-      setTimeout(() => exportToCSV(speakerStandings, 'speaker_standings'), 500);
+      exportToCSV(teamStandings as Record<string, unknown>[], 'team_standings');
+      setTimeout(() => exportToCSV(speakerStandings as Record<string, unknown>[], 'speaker_standings'), 500);
       
       toast.success("Full tournament results exported successfully!");
     } catch (error) {
