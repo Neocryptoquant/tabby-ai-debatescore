@@ -20,7 +20,7 @@ export const useTournamentQueries = (tournamentId?: string) => {
         .single();
 
       if (error) throw error;
-      setTournament(data);
+      setTournament(data as Tournament);
     } catch (error) {
       console.error('Error fetching tournament:', error);
     }
@@ -37,7 +37,7 @@ export const useTournamentQueries = (tournamentId?: string) => {
         .order('round_number');
 
       if (error) throw error;
-      setRounds(data || []);
+      setRounds(data as Round[] || []);
     } catch (error) {
       console.error('Error fetching rounds:', error);
     }
@@ -72,7 +72,7 @@ export const useTournamentQueries = (tournamentId?: string) => {
         .order('room');
 
       if (error) throw error;
-      setDraws(data || []);
+      setDraws(data as Draw[] || []);
     } catch (error) {
       console.error('Error fetching draws:', error);
     }

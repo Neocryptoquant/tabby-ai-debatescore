@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,8 +48,8 @@ export const useSubscription = () => {
           user_id: data.user_id,
           subscription_type: data.subscription_type as 'free' | 'premium',
           tournaments_limit: data.tournaments_limit,
-          plan_name: data.plan_name || 'Free',
-          amount_cents: data.amount_cents || 0,
+          plan_name: 'Free', // Default value since it's not in database
+          amount_cents: 0, // Default value since it's not in database
           created_at: data.created_at,
           expires_at: data.expires_at
         });

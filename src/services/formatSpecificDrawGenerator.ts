@@ -1,4 +1,4 @@
-import { Team, Judge, Draw } from "@/types/formats";
+import { Team, Judge, Draw } from "@/types/tournament";
 import { DebateFormat, DEBATE_FORMATS, FormatDrawOptions } from "@/types/formats";
 
 interface FormatDrawRoom {

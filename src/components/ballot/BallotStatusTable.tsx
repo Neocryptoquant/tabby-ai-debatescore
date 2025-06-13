@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -9,21 +10,21 @@ import { format } from 'date-fns';
 
 interface BallotStatusTableProps {
   ballots: any[];
-  judges: Judge[];
-  rounds: Round[];
-  draws: Draw[];
-  onConfirmBallot: (ballotId: string) => Promise<void>;
-  onDiscardBallot: (ballotId: string) => Promise<void>;
-  onCompleteRound: (roundId: string) => Promise<void>;
+  judges?: Judge[];
+  rounds?: Round[];
+  draws?: Draw[];
+  onConfirm?: (ballotId: string) => Promise<void>;
+  onDiscard?: (ballotId: string) => Promise<void>;
+  onCompleteRound?: (roundId: string) => Promise<void>;
 }
 
 export function BallotStatusTable({
   ballots,
-  judges,
-  rounds,
-  draws,
-  onConfirmBallot,
-  onDiscardBallot,
+  judges = [],
+  rounds = [],
+  draws = [],
+  onConfirm,
+  onDiscard,
   onCompleteRound
 }: BallotStatusTableProps) {
   const [selectedRound, setSelectedRound] = useState<string>('all');
@@ -31,11 +32,12 @@ export function BallotStatusTable({
   // Filter ballots by selected round
   const filteredBallots = selectedRound === 'all'
     ? ballots
-    : ballots.filter(ballot => ballot.draw.round_id === selectedRound);
+    : ballots.filter(ballot => ballot.draw?.round_id === selectedRound);
   
   // Group ballots by round
   const ballotsByRound = filteredBallots.reduce((acc, ballot) => {
-    const roundId = ballot.draw.round_id;
+    const roundId = ballot.draw?.round_id;
+    if (!roundId) return acc;
     if (!acc[roundId]) {
       acc[roundId] = [];
     }
@@ -53,7 +55,7 @@ export function BallotStatusTable({
   // Get round completion percentage
   const getRoundCompletionPercentage = (roundId: string) => {
     const roundDraws = draws.filter(d => d.round_id === roundId);
-    const roundBallots = ballots.filter(b => b.draw.round_id === roundId);
+    const roundBallots = ballots.filter(b => b.draw?.round_id === roundId);
     
     const submittedBallots = roundBallots.filter(b => 
       b.status === 'submitted' || b.status === 'confirmed'
@@ -154,7 +156,7 @@ export function BallotStatusTable({
                         <Badge className="bg-yellow-100 text-yellow-800">Upcoming</Badge>
                       )}
                     </div>
-                    {roundStatus === 'active' && completionPercentage === 100 && (
+                    {roundStatus === 'active' && completionPercentage === 100 && onCompleteRound && (
                       <Button
                         size="sm"
                         onClick={() => onCompleteRound(roundId)}
@@ -179,10 +181,10 @@ export function BallotStatusTable({
                   <TableBody>
                     {roundBallots.map((ballot) => (
                       <TableRow key={ballot.id}>
-                        <TableCell>{ballot.draw.room}</TableCell>
+                        <TableCell>{ballot.draw?.room || 'N/A'}</TableCell>
                         <TableCell>
-                          {ballot.judge.name}
-                          {ballot.judge.institution && (
+                          {ballot.judge?.name || 'Unknown Judge'}
+                          {ballot.judge?.institution && (
                             <div className="text-xs text-gray-500">{ballot.judge.institution}</div>
                           )}
                         </TableCell>
@@ -202,23 +204,23 @@ export function BallotStatusTable({
                               <Eye className="h-4 w-4" />
                             </Button>
                             
-                            {ballot.status === 'submitted' && (
+                            {ballot.status === 'submitted' && onConfirm && (
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="bg-green-50 text-green-700 hover:bg-green-100"
-                                onClick={() => onConfirmBallot(ballot.id)}
+                                onClick={() => onConfirm(ballot.id)}
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
                             )}
                             
-                            {(ballot.status === 'draft' || ballot.status === 'submitted') && (
+                            {(ballot.status === 'draft' || ballot.status === 'submitted') && onDiscard && (
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="bg-red-50 text-red-700 hover:bg-red-100"
-                                onClick={() => onDiscardBallot(ballot.id)}
+                                onClick={() => onDiscard(ballot.id)}
                               >
                                 <XCircle className="h-4 w-4" />
                               </Button>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -148,17 +147,16 @@ export function BallotManager({
     }
   };
   
-  // Complete a round
+  // Complete a round using edge function
   const completeRound = async (roundId: string) => {
     try {
-      // Use the Supabase function to complete the round
-      const { data, error } = await supabase.rpc('complete_round', {
-        p_round_id: roundId
+      const { data, error } = await supabase.functions.invoke('complete-round', {
+        body: { roundId }
       });
       
       if (error) throw error;
       
-      if (data) {
+      if (data?.completed) {
         toast.success('Round completed successfully');
         fetchBallots(); // Refresh data
       } else {
@@ -257,8 +255,12 @@ export function BallotManager({
                 {/* Ballots Table */}
                 <BallotStatusTable
                   ballots={ballots}
+                  judges={judges}
+                  rounds={rounds}
+                  draws={draws}
                   onConfirm={confirmBallot}
                   onDiscard={discardBallot}
+                  onCompleteRound={completeRound}
                 />
                 
                 <div className="text-xs text-gray-500 text-right">
