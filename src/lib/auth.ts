@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { Provider } from "@supabase/supabase-js";
 
 export type SignInWithPasswordCredentials = {
   email: string;
@@ -57,30 +56,6 @@ export async function signUpWithPassword({ email, password, full_name, instituti
     return { success: true, data };
   } catch (error) {
     console.error("Sign up error:", error);
-    toast.error("Something went wrong. Please try again.");
-    return { error };
-  }
-}
-
-export async function signInWithProvider(provider: Provider) {
-  try {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      toast.error(error.message);
-      return { error };
-    }
-
-    // For OAuth, we just return success and the data
-    // The actual redirect happens automatically
-    return { success: true, data };
-  } catch (error) {
-    console.error("Social login error:", error);
     toast.error("Something went wrong. Please try again.");
     return { error };
   }
