@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -47,51 +48,84 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const createOrUpdateProfile = async (user: User) => {
     try {
+      console.log('Creating/updating profile for user:', user.id);
+      
+      // First, let's check what data we have from the user
+      console.log('User metadata:', user.user_metadata);
+      console.log('User email:', user.email);
+      
       // Check if profile exists
       const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, email, full_name')
         .eq('id', user.id)
         .maybeSingle();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
+      if (fetchError) {
         console.error('Error checking existing profile:', fetchError);
         return;
       }
 
+      console.log('Existing profile:', existingProfile);
+
       if (!existingProfile) {
-        // Create new profile
-        const { error: insertError } = await supabase
+        // Create new profile with minimal required data
+        const profileData = {
+          id: user.id,
+          email: user.email || '',
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || '',
+          avatar_url: user.user_metadata?.avatar_url || null,
+          institution: user.user_metadata?.institution || null
+        };
+
+        console.log('Creating profile with data:', profileData);
+
+        const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
-          .insert({
-            id: user.id,
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
-            avatar_url: user.user_metadata?.avatar_url || null,
-            institution: user.user_metadata?.institution || null,
-            email: user.email
-          });
+          .insert([profileData])
+          .select()
+          .single();
 
         if (insertError) {
           console.error('Error creating profile:', insertError);
+          console.error('Profile data that failed:', profileData);
+          
+          // Don't throw error - just log it so authentication can continue
+          toast.error('Failed to create user profile, but you can still use the app');
+          return;
         } else {
-          console.log('Profile created successfully for user:', user.id);
+          console.log('Profile created successfully:', newProfile);
         }
       } else {
         // Update existing profile with email if needed
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            email: user.email,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
+        const updateData: any = {};
+        
+        if (user.email && user.email !== existingProfile.email) {
+          updateData.email = user.email;
+        }
+        
+        // Only update if we have data to update
+        if (Object.keys(updateData).length > 0) {
+          updateData.updated_at = new Date().toISOString();
           
-        if (updateError) {
-          console.error('Error updating profile email:', updateError);
+          console.log('Updating profile with data:', updateData);
+          
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update(updateData)
+            .eq('id', user.id);
+            
+          if (updateError) {
+            console.error('Error updating profile:', updateError);
+            // Don't throw error - just log it
+          } else {
+            console.log('Profile updated successfully');
+          }
         }
       }
     } catch (error) {
       console.error('Error in createOrUpdateProfile:', error);
+      // Don't throw error to prevent auth from failing
     }
   };
   
@@ -128,9 +162,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setSession(newSession);
           setUser(newSession.user);
           
-          // Create profile for new users
+          // Only create/update profile for sign-in events to avoid loops
           if (event === 'SIGNED_IN') {
-            await createOrUpdateProfile(newSession.user);
+            // Use setTimeout to defer profile creation and avoid auth callback issues
+            setTimeout(() => {
+              createOrUpdateProfile(newSession.user);
+            }, 100);
           }
         } else {
           setSession(null);
