@@ -18,56 +18,63 @@ const Callback = () => {
         setIsProcessing(true);
         
         // Get the session
-        const { data, error } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error("Auth callback error:", error);
-          setError(error.message);
+        if (sessionError) {
+          console.error("Auth callback error:", sessionError);
+          setError(sessionError.message);
           return;
         }
         
-        if (data.session) {
-          console.log("Authentication successful");
+        if (!session) {
+          setError("No session found. Please try signing in again.");
+          return;
+        }
+
+        console.log("Authentication successful for user:", session.user.email);
+        
+        // Check if user profile exists
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', session.user.id)
+          .maybeSingle();
           
-          // Check if user profile exists, if not create it
-          const { data: profile, error: profileError } = await supabase
+        if (profileError) {
+          console.error("Error checking profile:", profileError);
+          setError("Error checking user profile. Please try again.");
+          return;
+        }
+        
+        if (!profile) {
+          // Create profile from user metadata
+          const { user_metadata } = session.user;
+          
+          const { error: insertError } = await supabase
             .from('profiles')
-            .select('id')
-            .eq('id', data.session.user.id)
-            .maybeSingle();
+            .insert({
+              id: session.user.id,
+              full_name: user_metadata?.full_name || user_metadata?.name || '',
+              avatar_url: user_metadata?.avatar_url || null,
+              institution: user_metadata?.institution || null,
+              email: session.user.email
+            });
             
-          if (profileError && profileError.code !== 'PGRST116') {
-            console.error("Error checking profile:", profileError);
+          if (insertError) {
+            console.error("Error creating profile:", insertError);
+            setError("Error creating user profile. Please try again.");
+            return;
           }
           
-          if (!profile) {
-            // Create profile from user metadata
-            const { user_metadata } = data.session.user;
-            
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert({
-                id: data.session.user.id,
-                full_name: user_metadata?.full_name || user_metadata?.name || '',
-                avatar_url: user_metadata?.avatar_url || null,
-                institution: user_metadata?.institution || null,
-                email: data.session.user.email
-              });
-              
-            if (insertError) {
-              console.error("Error creating profile:", insertError);
-              toast.error("Error creating profile");
-            } else {
-              console.log("Profile created successfully");
-            }
-          }
-          
-          // Redirect to dashboard
+          console.log("Profile created successfully for:", session.user.email);
+        }
+        
+        // Set a small delay to ensure all state is updated
+        setTimeout(() => {
           toast.success("Signed in successfully!");
           navigate('/dashboard', { replace: true });
-        } else {
-          setError("No session found. Please try signing in again.");
-        }
+        }, 500);
+        
       } catch (err) {
         console.error("Error during auth callback:", err);
         setError("An unexpected error occurred during login");
@@ -78,51 +85,41 @@ const Callback = () => {
     
     handleAuthCallback();
   }, [navigate]);
-  
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="max-w-md w-full">
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center">
-            <BrainCircuit className="h-10 w-10 text-tabby-secondary" />
-            <span className="ml-2 text-2xl font-bold font-outfit">TabbyAI</span>
-          </div>
-        </div>
-        
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-semibold text-center">
-              {error ? "Authentication Error" : "Completing Login"}
-            </CardTitle>
-            <CardDescription className="text-center">
-              {error 
-                ? "There was a problem signing you in" 
-                : "Please wait while we complete your authentication"}
-            </CardDescription>
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="text-2xl font-semibold text-center text-red-600">Authentication Error</CardTitle>
+            <CardDescription className="text-center">{error}</CardDescription>
           </CardHeader>
-          
-          <CardContent className="space-y-4 flex flex-col items-center justify-center min-h-[100px]">
-            {isProcessing ? (
-              <LoadingSpinner size="lg" text="Authenticating..." />
-            ) : error ? (
-              <div className="text-red-500 text-center">{error}</div>
-            ) : (
-              <div className="text-green-500 text-center">Authentication successful! Redirecting...</div>
-            )}
-          </CardContent>
-          
-          {error && (
-            <CardFooter>
-              <Button 
-                onClick={() => navigate('/auth/sign-in')}
-                className="w-full"
-              >
-                Back to Sign In
-              </Button>
-            </CardFooter>
-          )}
+          <CardFooter className="flex justify-center">
+            <Button onClick={() => navigate('/auth/signin')}>
+              Return to Sign In
+            </Button>
+          </CardFooter>
         </Card>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
+      <Card className="max-w-md w-full">
+        <CardHeader>
+          <div className="flex justify-center mb-4">
+            <BrainCircuit className="h-12 w-12 text-tabby-secondary" />
+          </div>
+          <CardTitle className="text-2xl font-semibold text-center">Completing Sign In</CardTitle>
+          <CardDescription className="text-center">
+            Please wait while we set up your account...
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center">
+          <LoadingSpinner size="lg" />
+        </CardContent>
+      </Card>
     </div>
   );
 };

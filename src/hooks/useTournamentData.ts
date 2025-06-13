@@ -18,7 +18,8 @@ export const useTournamentData = (tournamentId?: string) => {
     fetchTournament,
     fetchRounds: fetchBasicRounds,
     fetchTeams,
-    fetchDraws
+    fetchDraws,
+    error
   } = useTournamentQueries(tournamentId);
 
   const {
@@ -27,7 +28,12 @@ export const useTournamentData = (tournamentId?: string) => {
     updateTeam,
     deleteRound: deleteBasicRound,
     deleteTeam
-  } = useTournamentMutations(tournamentId, setRounds, setTeams, fetchDraws);
+  } = useTournamentMutations(
+    tournamentId,
+    (updater) => setRounds((prev) => updater(prev)),
+    (updater) => setTeams((prev) => updater(prev)),
+    fetchDraws
+  );
 
   const { generateDraws } = useDrawsOperations(tournamentId, basicRounds, teams, fetchDraws);
 
@@ -119,6 +125,7 @@ export const useTournamentData = (tournamentId?: string) => {
     isGenerating,
     
     // Utility
-    refetch
+    refetch,
+    error
   };
 };

@@ -1,13 +1,30 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tournament, Round, Team, Draw } from '@/types/tournament';
+import { toast } from 'sonner';
+
+interface TournamentQueriesState {
+  tournament: Tournament | null;
+  rounds: Round[];
+  teams: Team[];
+  draws: Draw[];
+  isLoading: boolean;
+  error: string | null;
+}
 
 export const useTournamentQueries = (tournamentId?: string) => {
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [rounds, setRounds] = useState<Round[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [draws, setDraws] = useState<Draw[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState<TournamentQueriesState>({
+    tournament: null,
+    rounds: [],
+    teams: [],
+    draws: [],
+    isLoading: true,
+    error: null
+  });
+
+  const updateState = (updates: Partial<TournamentQueriesState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  };
 
   const fetchTournament = async () => {
     if (!tournamentId) return;
@@ -20,9 +37,11 @@ export const useTournamentQueries = (tournamentId?: string) => {
         .single();
 
       if (error) throw error;
-      setTournament(data as Tournament);
+      updateState({ tournament: data as Tournament, error: null });
     } catch (error) {
       console.error('Error fetching tournament:', error);
+      updateState({ error: 'Failed to fetch tournament details' });
+      toast.error('Failed to fetch tournament details');
     }
   };
 
@@ -37,9 +56,11 @@ export const useTournamentQueries = (tournamentId?: string) => {
         .order('round_number');
 
       if (error) throw error;
-      setRounds(data as Round[] || []);
+      updateState({ rounds: (data || []) as Round[], error: null });
     } catch (error) {
       console.error('Error fetching rounds:', error);
+      updateState({ error: 'Failed to fetch rounds' });
+      toast.error('Failed to fetch rounds');
     }
   };
 
@@ -54,9 +75,11 @@ export const useTournamentQueries = (tournamentId?: string) => {
         .order('name');
 
       if (error) throw error;
-      setTeams(data || []);
+      updateState({ teams: data || [], error: null });
     } catch (error) {
       console.error('Error fetching teams:', error);
+      updateState({ error: 'Failed to fetch teams' });
+      toast.error('Failed to fetch teams');
     }
   };
 
@@ -64,42 +87,68 @@ export const useTournamentQueries = (tournamentId?: string) => {
     if (!tournamentId) return;
     
     try {
-      // Simplified query without complex joins that might fail
       const { data, error } = await supabase
         .from('draws')
-        .select('*')
+        .select(`
+          *,
+          team1:teams!draws_team1_id_fkey(*),
+          team2:teams!draws_team2_id_fkey(*),
+          judge:judges(*)
+        `)
         .eq('tournament_id', tournamentId)
         .order('room');
 
       if (error) throw error;
-      setDraws(data as Draw[] || []);
+      updateState({ draws: (data || []) as Draw[], error: null });
     } catch (error) {
       console.error('Error fetching draws:', error);
+      updateState({ error: 'Failed to fetch draws' });
+      toast.error('Failed to fetch draws');
+    }
+  };
+
+  const refreshAll = async () => {
+    if (!tournamentId) return;
+    
+    updateState({ isLoading: true, error: null });
+    
+    try {
+      await Promise.all([
+        fetchTournament(),
+        fetchRounds(),
+        fetchTeams(),
+        fetchDraws()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing tournament data:', error);
+      updateState({ error: 'Failed to refresh tournament data' });
+      toast.error('Failed to refresh tournament data');
+    } finally {
+      updateState({ isLoading: false });
     }
   };
 
   useEffect(() => {
     if (tournamentId) {
-      setIsLoading(true);
-      Promise.all([
-        fetchTournament(),
-        fetchRounds(),
-        fetchTeams(),
-        fetchDraws()
-      ]).finally(() => {
-        setIsLoading(false);
+      refreshAll();
+    } else {
+      updateState({
+        tournament: null,
+        rounds: [],
+        teams: [],
+        draws: [],
+        isLoading: false,
+        error: null
       });
     }
   }, [tournamentId]);
 
   return {
-    tournament,
-    rounds,
-    teams,
-    draws,
-    isLoading,
-    setRounds,
-    setTeams,
+    ...state,
+    refreshAll,
+    setRounds: (updater: (prev: Round[]) => Round[]) => updateState({ rounds: updater(state.rounds) }),
+    setTeams: (updater: (prev: Team[]) => Team[]) => updateState({ teams: updater(state.teams) }),
+    setDraws: (updater: (prev: Draw[]) => Draw[]) => updateState({ draws: updater(state.draws) }),
     fetchTournament,
     fetchRounds,
     fetchTeams,

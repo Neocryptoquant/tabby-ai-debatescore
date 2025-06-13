@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -10,7 +9,7 @@ export interface TournamentAnalytic {
   round_id?: string;
   metric_type: string;
   metric_value: number;
-  metadata?: any;
+  metadata?: unknown;
   created_at: string;
 }
 
@@ -220,7 +219,7 @@ export const useTournamentAnalytics = (tournamentId?: string) => {
   const recordAnalytic = async (
     metric_type: string,
     metric_value: number,
-    metadata?: any,
+    metadata?: unknown,
     team_id?: string,
     round_id?: string
   ) => {

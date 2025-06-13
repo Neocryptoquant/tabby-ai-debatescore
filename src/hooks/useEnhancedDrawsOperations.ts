@@ -10,7 +10,7 @@ export const useEnhancedDrawsOperations = (
   judges: Judge[] = [],
   refetchDraws?: () => void
 ) => {
-  const [generationHistory, setGenerationHistory] = useState<any[]>([]);
+  const [generationHistory, setGenerationHistory] = useState<unknown[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const fetchGenerationHistory = useCallback(async () => {

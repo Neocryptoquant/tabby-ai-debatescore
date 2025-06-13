@@ -79,7 +79,8 @@ const TournamentDetail = () => {
     generationHistory,
     isGenerating,
     updateRoundPrivacy,
-    refetch 
+    refetch,
+    error
   } = useTournamentData(id);
 
   const [activeTab, setActiveTab] = useState("overview");
@@ -354,11 +355,40 @@ const TournamentDetail = () => {
     toast.info('Complete round functionality coming soon!');
   };
 
-  if (isLoading || !tournament) {
+  if (isLoading) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-tabby-secondary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center min-h-64">
+          <div className="p-6 bg-red-100 text-red-700 rounded shadow">
+            <h2 className="text-xl font-bold mb-2">Error loading tournament</h2>
+            <p className="mb-4">{error}</p>
+            <Button onClick={refetch} variant="destructive">Retry</Button>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!tournament) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-64">
+          <div className="p-6 bg-yellow-100 text-yellow-700 rounded shadow">
+            <h2 className="text-xl font-bold mb-2">Tournament Not Found</h2>
+            <Button asChild variant="outline">
+              <Link to="/tournaments">Back to Tournaments</Link>
+            </Button>
+          </div>
         </div>
       </MainLayout>
     );
