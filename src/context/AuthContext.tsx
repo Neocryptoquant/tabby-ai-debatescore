@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -57,7 +56,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Check if profile exists
       const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
-        .select('id, email, full_name')
+        .select('id, full_name')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -100,7 +99,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Update existing profile with email if needed
         const updateData: any = {};
         
-        if (user.email && user.email !== existingProfile.email) {
+        if (user.email) {
           updateData.email = user.email;
         }
         

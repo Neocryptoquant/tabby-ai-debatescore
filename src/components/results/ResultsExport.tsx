@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,7 +76,7 @@ export const ResultsExport = ({ tournamentId, tournamentName }: ResultsExportPro
     setIsExporting(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      exportToCSV(teamStandings as Record<string, unknown>[], 'team_standings');
+      exportToCSV(teamStandings as unknown as Record<string, unknown>[], 'team_standings');
       toast.success("Team standings exported successfully!");
     } catch (error) {
       toast.error("Failed to export team standings");
@@ -88,7 +89,7 @@ export const ResultsExport = ({ tournamentId, tournamentName }: ResultsExportPro
     setIsExporting(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      exportToCSV(speakerStandings as Record<string, unknown>[], 'speaker_standings');
+      exportToCSV(speakerStandings as unknown as Record<string, unknown>[], 'speaker_standings');
       toast.success("Speaker standings exported successfully!");
     } catch (error) {
       toast.error("Failed to export speaker standings");
@@ -103,8 +104,8 @@ export const ResultsExport = ({ tournamentId, tournamentName }: ResultsExportPro
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Export multiple files
-      exportToCSV(teamStandings as Record<string, unknown>[], 'team_standings');
-      setTimeout(() => exportToCSV(speakerStandings as Record<string, unknown>[], 'speaker_standings'), 500);
+      exportToCSV(teamStandings as unknown as Record<string, unknown>[], 'team_standings');
+      setTimeout(() => exportToCSV(speakerStandings as unknown as Record<string, unknown>[], 'speaker_standings'), 500);
       
       toast.success("Full tournament results exported successfully!");
     } catch (error) {

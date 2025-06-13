@@ -78,6 +78,7 @@ export type Database = {
       }
       ballots: {
         Row: {
+          auto_calculate_positions: boolean | null
           cg_team_id: string | null
           cg_team_points: number | null
           cg_team_rank: number | null
@@ -105,6 +106,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          auto_calculate_positions?: boolean | null
           cg_team_id?: string | null
           cg_team_points?: number | null
           cg_team_rank?: number | null
@@ -132,6 +134,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          auto_calculate_positions?: boolean | null
           cg_team_id?: string | null
           cg_team_points?: number | null
           cg_team_rank?: number | null
@@ -634,6 +637,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          email: string | null
           full_name: string | null
           id: string
           institution: string | null
@@ -643,6 +647,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id: string
           institution?: string | null
@@ -652,6 +657,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id?: string
           institution?: string | null
@@ -1028,6 +1034,10 @@ export type Database = {
       advance_teams_to_next_break: {
         Args: { p_current_break_id: string; p_next_break_name: string }
         Returns: string
+      }
+      calculate_team_positions_by_speaker_scores: {
+        Args: { p_ballot_id: string }
+        Returns: undefined
       }
       complete_round: {
         Args: { p_round_id: string }
