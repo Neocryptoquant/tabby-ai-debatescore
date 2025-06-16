@@ -91,9 +91,11 @@ export const useTournamentQueries = (tournamentId?: string) => {
         .from('draws')
         .select(`
           *,
-          team1:teams!draws_team1_id_fkey(*),
-          team2:teams!draws_team2_id_fkey(*),
-          judge:judges(*)
+          gov_team:teams!gov_team_id(*),
+          opp_team:teams!opp_team_id(*),
+          cg_team:teams!cg_team_id(*),
+          co_team:teams!co_team_id(*),
+          judge:judges!judge_id(*)
         `)
         .eq('tournament_id', tournamentId)
         .order('room');
