@@ -48,6 +48,7 @@ const CreateTournament = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [breakCategories, setBreakCategories] = useState<BreakCategory[]>([]);
   const [selectedFormat, setSelectedFormat] = useState<DebateFormat>('bp');
+  const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
 
   const form = useForm({
     defaultValues: {
@@ -57,17 +58,17 @@ const CreateTournament = () => {
       endDate: "",
       location: "",
       description: "",
-      teamCount: 16,
-      roundCount: 6,
-      motionsPerRound: 1,
-      breakType: "none",
+      team_count: 16,
+      round_count: 6,
+      motions_per_round: 1,
+      break_type: "none",
       useAI: true,
     },
   });
 
   const { register, handleSubmit, setValue, watch } = form;
-  const teamCount = parseInt(watch("teamCount") || "16");
-  const roundCount = parseInt(watch("roundCount") || "6");
+  const teamCount = parseInt(String(watch("team_count")) || "16");
+  const roundCount = parseInt(String(watch("round_count")) || "6");
 
   // Redirect if user cannot create tournaments
   if (!roleLoading && !canCreateTournaments && user) {
@@ -96,6 +97,14 @@ const CreateTournament = () => {
     setValue("format", format);
   };
   
+  const addLink = () => setLinks([...links, { label: '', url: '' }]);
+  const updateLink = (index: number, field: 'label' | 'url', value: string) => {
+    const updated = [...links];
+    updated[index][field] = value;
+    setLinks(updated);
+  };
+  const removeLink = (index: number) => setLinks(links.filter((_, i) => i !== index));
+
   const onSubmit = async (data: any) => {
     if (!user) {
       toast.error("You must be logged in to create a tournament");
@@ -119,12 +128,13 @@ const CreateTournament = () => {
           end_date: data.endDate || null,
           location: data.location || null,
           description: data.description || null,
-          team_count: data.teamCount ? parseInt(data.teamCount) : null,
-          round_count: data.roundCount ? parseInt(data.roundCount) : null,
-          motions_per_round: data.motionsPerRound ? parseInt(data.motionsPerRound) : 1,
-          break_type: data.breakType || 'none',
+          team_count: data.team_count ? parseInt(data.team_count) : null,
+          round_count: data.round_count ? parseInt(data.round_count) : null,
+          motions_per_round: data.motions_per_round ? parseInt(data.motions_per_round) : 1,
+          break_type: data.break_type || 'none',
           created_by: user.id,
-          status: 'upcoming'
+          status: 'upcoming',
+          links: links.length > 0 ? links : null
         })
         .select()
         .single();
@@ -231,6 +241,33 @@ const CreateTournament = () => {
                     placeholder="Add details about your tournament..."
                     rows={3}
                   />
+                </div>
+
+                {/* Links Section */}
+                <div className="space-y-2">
+                  <Label>Useful Links (optional)</Label>
+                  {links.map((link, idx) => (
+                    <div key={idx} className="flex gap-2 mb-2">
+                      <Input
+                        placeholder="Label (e.g. Registration, Info Pack)"
+                        value={link.label}
+                        onChange={e => updateLink(idx, 'label', e.target.value)}
+                        className="w-1/3"
+                      />
+                      <Input
+                        placeholder="URL (https://...)"
+                        value={link.url}
+                        onChange={e => updateLink(idx, 'url', e.target.value)}
+                        className="w-2/3"
+                      />
+                      <Button type="button" variant="destructive" onClick={() => removeLink(idx)}>
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={addLink}>
+                    Add Link
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -340,7 +377,7 @@ const CreateTournament = () => {
               <CardContent>
                 <p className="text-sm text-gray-500">
                   You're creating a {watch("format") ? watch("format").toUpperCase() : "[Format]"} format tournament with{" "}
-                  {watch("teamCount") || "[N]"} teams and {watch("roundCount") || "[N]"} rounds.
+                  {watch("team_count") || "[N]"} teams and {watch("round_count") || "[N]"} rounds.
                 </p>
               </CardContent>
               <CardFooter>

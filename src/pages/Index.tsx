@@ -1,9 +1,88 @@
-
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, Trophy, Users, Calendar, BarChart3 } from "lucide-react";
+import { BrainCircuit, Trophy, Users, Calendar, BarChart3, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { TournamentCard } from "@/components/cards/TournamentCard";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+type Tournament = {
+  id: string;
+  name: string;
+  format: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  team_count: number | null;
+  location: string | null;
+  status: string | null;
+};
 
 const Index = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTournaments();
+  }, []);
+
+  const fetchTournaments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching tournaments:', error);
+        toast.error("Failed to load tournaments");
+        return;
+      }
+
+      setTournaments(data || []);
+    } catch (error) {
+      console.error('Error fetching tournaments:', error);
+      toast.error("Failed to load tournaments");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatTournamentData = (tournament: Tournament) => {
+    const formatDate = (dateStr: string | null) => {
+      if (!dateStr) return "TBD";
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric' 
+      });
+    };
+
+    const startDate = formatDate(tournament.start_date);
+    const endDate = formatDate(tournament.end_date);
+    const dateRange = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+
+    return {
+      id: tournament.id,
+      name: tournament.name,
+      format: tournament.format?.toUpperCase() || "TBD",
+      date: dateRange,
+      teamCount: tournament.team_count || 0,
+      location: tournament.location || "TBD",
+      status: (tournament.status as "active" | "upcoming" | "completed") || "upcoming",
+    };
+  };
+
+  const filteredTournaments = tournaments
+    .map(formatTournamentData)
+    .filter(t => 
+      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.format.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Navigation */}
@@ -67,6 +146,53 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Tournaments Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-tabby-primary font-outfit">Upcoming Tournaments</h2>
+            <p className="mt-4 text-gray-600 max-w-2xl mx-auto">
+              Browse and join exciting debate tournaments happening around the world.
+            </p>
+          </div>
+
+          {/* Search Bar */}
+          <div className="max-w-md mx-auto mb-8">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search tournaments..."
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* Tournament Grid */}
+          {isLoading ? (
+            <div className="flex items-center justify-center min-h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-tabby-secondary"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredTournaments.map((tournament) => (
+                <TournamentCard 
+                  key={tournament.id}
+                  id={tournament.id}
+                  name={tournament.name}
+                  format={tournament.format}
+                  date={tournament.date}
+                  teamCount={tournament.teamCount}
+                  location={tournament.location}
+                  status={tournament.status}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
       
       {/* Features Section */}
       <section id="features" className="py-16">
@@ -103,9 +229,9 @@ const Index = () => {
               <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-tabby-secondary/10 text-tabby-secondary">
                 <Calendar className="h-6 w-6" />
               </div>
-              <h3 className="mt-6 text-lg font-medium">Scheduling Magic</h3>
+              <h3 className="mt-6 text-lg font-medium">Automated Scheduling</h3>
               <p className="mt-2 text-gray-500 text-sm">
-                End scheduling debates with intelligent room allocation — no more "on the balance of probabilities."
+                Let AI handle the logistics while you focus on the debate.
               </p>
             </div>
             
@@ -113,9 +239,9 @@ const Index = () => {
               <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-tabby-secondary/10 text-tabby-secondary">
                 <BarChart3 className="h-6 w-6" />
               </div>
-              <h3 className="mt-6 text-lg font-medium">Performance Analytics</h3>
+              <h3 className="mt-6 text-lg font-medium">Real-time Analytics</h3>
               <p className="mt-2 text-gray-500 text-sm">
-                Get speaker statistics so detailed, not even an opposition rebuttal could poke holes in them.
+                Track performance and generate insights with AI-powered analytics.
               </p>
             </div>
           </div>

@@ -434,6 +434,68 @@ const TournamentDetail = () => {
     }
   ];
 
+  if (!canEdit) {
+    // Read-only public view for non-creators
+    return (
+      <MainLayout>
+        <PageHeader
+          title={tournament.name}
+          description={tournament.description || `${format.toUpperCase()} Tournament`}
+        />
+        <div className="space-y-6">
+          <TournamentCard {...tournamentCardData} />
+
+          {/* Tournament Links Section */}
+          {tournament.links && tournament.links.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Useful Links</h3>
+              <div className="flex flex-wrap gap-2">
+                {tournament.links.map((link, idx) => (
+                  <a
+                    key={idx}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-4 py-2 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition"
+                  >
+                    {link.label || link.url}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="bg-blue-50 rounded-lg p-6">
+              <div className="text-blue-600 text-2xl font-bold">{teams?.length || 0}</div>
+              <div className="text-blue-700 font-semibold">Teams</div>
+              <div className="text-gray-500 text-sm">Total registered teams</div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-6">
+              <div className="text-blue-600 text-2xl font-bold">{judges?.length || 0}</div>
+              <div className="text-blue-700 font-semibold">Judges</div>
+              <div className="text-gray-500 text-sm">Total registered judges</div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-6">
+              <div className="text-blue-600 text-2xl font-bold">{rounds?.length || 0}</div>
+              <div className="text-blue-700 font-semibold">Rounds</div>
+              <div className="text-gray-500 text-sm">Total rounds</div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-6">
+              <div className="text-blue-600 text-2xl font-bold">{roomsNeeded}</div>
+              <div className="text-blue-700 font-semibold">Debate Rooms</div>
+              <div className="text-gray-500 text-sm">{format.toUpperCase()} format rooms</div>
+            </div>
+          </div>
+
+          {/* Format Guide */}
+          <FormatGuide format={format as any} />
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <PageHeader
@@ -453,6 +515,26 @@ const TournamentDetail = () => {
 
       <div className="space-y-6">
         <TournamentCard {...tournamentCardData} />
+
+        {/* Tournament Links Section */}
+        {tournament.links && tournament.links.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Useful Links</h3>
+            <div className="flex flex-wrap gap-2">
+              {tournament.links.map((link, idx) => (
+                <a
+                  key={idx}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-4 py-2 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition"
+                >
+                  {link.label || link.url}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-8 max-w-4xl">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { UseFormReturn, FieldValues } from 'react-hook-form';
+import { UseFormReturn, FieldValues, Path, PathValue } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -9,19 +9,26 @@ import { Badge } from '@/components/ui/badge';
 import { X, Plus } from 'lucide-react';
 import { ExperienceLevel, BreakCategory } from '@/types/tournament';
 
-interface TournamentSettingsFormProps {
-  form: UseFormReturn<FieldValues>;
+// Define the expected form data shape
+interface TournamentSettingsFormData extends FieldValues {
+  team_count: number;
+  round_count: number;
+  break_type: string;
+}
+
+interface TournamentSettingsFormProps<T extends TournamentSettingsFormData = TournamentSettingsFormData> {
+  form: UseFormReturn<T>;
   breakCategories: BreakCategory[];
   setBreakCategories: (categories: BreakCategory[]) => void;
 }
 
 const EXPERIENCE_LEVELS: ExperienceLevel[] = ['novice', 'intermediate', 'open', 'pro'];
 
-export const TournamentSettingsForm: React.FC<TournamentSettingsFormProps> = ({
+export const TournamentSettingsForm = <T extends TournamentSettingsFormData = TournamentSettingsFormData>({
   form,
   breakCategories,
   setBreakCategories
-}) => {
+}: TournamentSettingsFormProps<T>) => {
   const { watch, setValue } = form;
 
   const addBreakCategory = () => {
@@ -68,7 +75,7 @@ export const TournamentSettingsForm: React.FC<TournamentSettingsFormProps> = ({
               type="number"
               min="2"
               max="256"
-              {...form.register("team_count", { 
+              {...form.register("team_count" as Path<T>, { 
                 valueAsNumber: true,
                 min: { value: 2, message: "Minimum 2 teams required" },
                 max: { value: 256, message: "Maximum 256 teams allowed" }
@@ -82,7 +89,7 @@ export const TournamentSettingsForm: React.FC<TournamentSettingsFormProps> = ({
               type="number"
               min="1"
               max="20"
-              {...form.register("round_count", { 
+              {...form.register("round_count" as Path<T>, { 
                 valueAsNumber: true,
                 min: { value: 1, message: "Minimum 1 round required" },
                 max: { value: 20, message: "Maximum 20 rounds allowed" }
@@ -92,8 +99,8 @@ export const TournamentSettingsForm: React.FC<TournamentSettingsFormProps> = ({
           <div>
             <Label htmlFor="break_type">Break Structure</Label>
             <Select 
-              value={watch("break_type") || "none"} 
-              onValueChange={(value) => setValue("break_type", value)}
+              value={watch("break_type" as Path<T>) || "none"} 
+              onValueChange={(value: string) => setValue("break_type" as Path<T>, value as PathValue<T, Path<T>>)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select break type" />

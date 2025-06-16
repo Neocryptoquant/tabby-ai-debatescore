@@ -18,6 +18,7 @@ export interface Tournament {
   break_categories?: BreakCategory[];
   created_at?: string;
   updated_at?: string;
+  links?: { label: string; url: string }[]; // Optional links for info page
 }
 
 export interface Round {

@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, UseFormReturn, FieldValues } from "react-hook-form";
 import { ChevronLeft, Save, Loader2 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeader from "@/components/layout/PageHeader";
@@ -49,6 +48,7 @@ interface DatabaseTournament {
   created_by: string;
   created_at: string;
   updated_at: string;
+  links?: { label: string; url: string }[];
 }
 
 const EditTournament = () => {
@@ -58,6 +58,7 @@ const EditTournament = () => {
   const [tournament, setTournament] = useState<DatabaseTournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [breakCategories, setBreakCategories] = useState<BreakCategory[]>([]);
+  const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
 
   // React Hook Form setup with proper typing
   const form = useForm<TournamentFormData>({
@@ -84,6 +85,13 @@ const EditTournament = () => {
       fetchTournament();
     }
   }, [id]);
+
+  // Load links into state when tournament is loaded
+  useEffect(() => {
+    if (tournament && Array.isArray(tournament.links)) {
+      setLinks(tournament.links);
+    }
+  }, [tournament]);
 
   // Check permissions after tournament is loaded
   useEffect(() => {
@@ -171,6 +179,7 @@ const EditTournament = () => {
         break_type: data.break_type,
         status: data.status,
         updated_at: new Date().toISOString(),
+        links: links.length > 0 ? links : null
       };
 
       const { error } = await supabase
@@ -192,6 +201,14 @@ const EditTournament = () => {
       toast.error("Failed to update tournament");
     }
   };
+
+  const addLink = () => setLinks([...links, { label: '', url: '' }]);
+  const updateLink = (index: number, field: 'label' | 'url', value: string) => {
+    const updated = [...links];
+    updated[index][field] = value;
+    setLinks(updated);
+  };
+  const removeLink = (index: number) => setLinks(links.filter((_, i) => i !== index));
 
   // Show loading state
   if (isLoading) {
@@ -349,6 +366,36 @@ const EditTournament = () => {
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Useful Links (optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {links.map((link, idx) => (
+              <div key={idx} className="flex gap-2 mb-2">
+                <Input
+                  placeholder="Label (e.g. Registration, Info Pack)"
+                  value={link.label}
+                  onChange={e => updateLink(idx, 'label', e.target.value)}
+                  className="w-1/3"
+                />
+                <Input
+                  placeholder="URL (https://...)"
+                  value={link.url}
+                  onChange={e => updateLink(idx, 'url', e.target.value)}
+                  className="w-2/3"
+                />
+                <Button type="button" variant="destructive" onClick={() => removeLink(idx)}>
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button type="button" variant="outline" onClick={addLink}>
+              Add Link
+            </Button>
           </CardContent>
         </Card>
 
