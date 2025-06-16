@@ -48,7 +48,6 @@ const CreateTournament = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [breakCategories, setBreakCategories] = useState<BreakCategory[]>([]);
   const [selectedFormat, setSelectedFormat] = useState<DebateFormat>('bp');
-  const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
 
   const form = useForm({
     defaultValues: {
@@ -97,14 +96,6 @@ const CreateTournament = () => {
     setValue("format", format);
   };
   
-  const addLink = () => setLinks([...links, { label: '', url: '' }]);
-  const updateLink = (index: number, field: 'label' | 'url', value: string) => {
-    const updated = [...links];
-    updated[index][field] = value;
-    setLinks(updated);
-  };
-  const removeLink = (index: number) => setLinks(links.filter((_, i) => i !== index));
-
   const onSubmit = async (data: any) => {
     if (!user) {
       toast.error("You must be logged in to create a tournament");
@@ -133,8 +124,7 @@ const CreateTournament = () => {
           motions_per_round: data.motions_per_round ? parseInt(data.motions_per_round) : 1,
           break_type: data.break_type || 'none',
           created_by: user.id,
-          status: 'upcoming',
-          links: links.length > 0 ? links : null
+          status: 'upcoming'
         })
         .select()
         .single();
@@ -241,33 +231,6 @@ const CreateTournament = () => {
                     placeholder="Add details about your tournament..."
                     rows={3}
                   />
-                </div>
-
-                {/* Links Section */}
-                <div className="space-y-2">
-                  <Label>Useful Links (optional)</Label>
-                  {links.map((link, idx) => (
-                    <div key={idx} className="flex gap-2 mb-2">
-                      <Input
-                        placeholder="Label (e.g. Registration, Info Pack)"
-                        value={link.label}
-                        onChange={e => updateLink(idx, 'label', e.target.value)}
-                        className="w-1/3"
-                      />
-                      <Input
-                        placeholder="URL (https://...)"
-                        value={link.url}
-                        onChange={e => updateLink(idx, 'url', e.target.value)}
-                        className="w-2/3"
-                      />
-                      <Button type="button" variant="destructive" onClick={() => removeLink(idx)}>
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" onClick={addLink}>
-                    Add Link
-                  </Button>
                 </div>
               </CardContent>
             </Card>
