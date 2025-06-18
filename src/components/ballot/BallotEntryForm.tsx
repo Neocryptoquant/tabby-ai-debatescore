@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -62,6 +61,14 @@ interface BallotEntryFormProps {
   onSuccess: () => void;
 }
 
+const BP_POSITIONS = [
+  { key: 'OG', label: 'Opening Government', color: 'bg-blue-100 text-blue-900' },
+  { key: 'OO', label: 'Opening Opposition', color: 'bg-red-100 text-red-900' },
+  { key: 'CG', label: 'Closing Government', color: 'bg-green-100 text-green-900' },
+  { key: 'CO', label: 'Closing Opposition', color: 'bg-yellow-100 text-yellow-900' },
+];
+const BP_POINTS = [3, 2, 1, 0];
+
 export function BallotEntryForm({
   tournamentId,
   judges,
@@ -74,6 +81,9 @@ export function BallotEntryForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDraw, setSelectedDraw] = useState<Draw | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<'bp' | 'wsdc'>('bp');
+  const [editingBallot, setEditingBallot] = useState<any>(null);
+  const [teamTotals, setTeamTotals] = useState<number[]>([0,0,0,0]);
+  const [teamRanks, setTeamRanks] = useState<number[]>([1,2,3,4]);
   
   const form = useForm<BallotEntryFormData>({
     resolver: zodResolver(ballotEntrySchema),
@@ -99,6 +109,7 @@ export function BallotEntryForm({
   
   // Watch for draw selection to populate teams
   const watchedDrawId = watch('draw_id');
+  const watchedJudgeId = watch('judge_id');
   
   React.useEffect(() => {
     if (watchedDrawId) {
@@ -156,6 +167,74 @@ export function BallotEntryForm({
     }
   }, [watchedDrawId, draws, teams, setValue]);
   
+  // Check for existing ballot on draw/judge change
+  useEffect(() => {
+    const checkExistingBallot = async () => {
+      if (!watchedDrawId || !watchedJudgeId) return;
+      const { data, error } = await supabase
+        .from('ballots')
+        .select('*')
+        .eq('draw_id', watchedDrawId)
+        .eq('judge_id', watchedJudgeId)
+        .single();
+      if (data) {
+        setEditingBallot(data);
+        // Only set values for keys that exist in the form
+        const formKeys = Object.keys(form.getValues());
+        Object.entries(data).forEach(([key, value]) => {
+          if (formKeys.includes(key)) setValue(key as any, value);
+        });
+        // TODO: fetch and populate speaker_scores if needed
+      } else {
+        setEditingBallot(null);
+      }
+    };
+    checkExistingBallot();
+  }, [watchedDrawId, watchedJudgeId]);
+
+  // Real-time update for teamTotals and teamRanks
+  useEffect(() => {
+    if (selectedFormat !== 'bp' || !selectedDraw) return;
+    const scores = watch('speaker_scores');
+    // Calculate total speaker scores for each team
+    const totals = [0,1,2,3].map(idx => {
+      const s1 = scores?.[idx*2]?.score || 0;
+      const s2 = scores?.[idx*2+1]?.score || 0;
+      return s1 + s2;
+    });
+    setTeamTotals(totals);
+    // Calculate ranks (descending order)
+    const sorted = [...totals].map((val, i) => ({val, i}))
+      .sort((a,b) => b.val - a.val)
+      .map((item, rank) => ({...item, rank: rank+1}));
+    const ranks = Array(4).fill(0);
+    sorted.forEach(item => { ranks[item.i] = item.rank; });
+    setTeamRanks(ranks);
+  }, [selectedFormat, selectedDraw, watch('speaker_scores')]);
+  
+  // For real-time updates and caching, add useEffect to save speaker_scores to localStorage
+  useEffect(() => {
+    if (selectedFormat === 'bp' && selectedDraw) {
+      const scores = watch('speaker_scores');
+      if (scores && Array.isArray(scores)) {
+        localStorage.setItem(`bp_speaker_scores_${selectedDraw.id}`, JSON.stringify(scores));
+      }
+    }
+  }, [watch('speaker_scores'), selectedFormat, selectedDraw]);
+
+  // On draw change, restore speaker_scores from cache if available
+  useEffect(() => {
+    if (selectedFormat === 'bp' && selectedDraw) {
+      const cached = localStorage.getItem(`bp_speaker_scores_${selectedDraw.id}`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) setValue('speaker_scores', parsed);
+        } catch {}
+      }
+    }
+  }, [selectedFormat, selectedDraw, setValue]);
+  
   const handleFormSubmit = async (data: BallotEntryFormData) => {
     if (!selectedDraw) {
       toast.error('Please select a room/draw');
@@ -165,39 +244,49 @@ export function BallotEntryForm({
     setIsSubmitting(true);
     
     try {
-      // Insert the ballot
-      const { data: ballotData, error: ballotError } = await supabase
-        .from('ballots')
-        .insert({
-          tournament_id: tournamentId,
-          round_id: data.round_id,
-          draw_id: data.draw_id,
-          judge_id: data.judge_id,
-          gov_team_id: selectedDraw.gov_team_id,
-          opp_team_id: selectedDraw.opp_team_id,
-          cg_team_id: selectedDraw.cg_team_id,
-          co_team_id: selectedDraw.co_team_id,
-          gov_team_points: data.gov_team_points,
-          opp_team_points: data.opp_team_points,
-          cg_team_points: data.cg_team_points,
-          co_team_points: data.co_team_points,
-          gov_team_rank: data.gov_team_rank,
-          opp_team_rank: data.opp_team_rank,
-          cg_team_rank: data.cg_team_rank,
-          co_team_rank: data.co_team_rank,
-          status: 'submitted',
-          submission_time: new Date().toISOString(),
-          feedback: data.feedback,
-          notes: data.notes
-        })
-        .select()
-        .single();
-      
-      if (ballotError) throw ballotError;
+      let ballotId = editingBallot?.id;
+      let ballotData;
+      const ballotPayload = {
+        tournament_id: tournamentId,
+        round_id: data.round_id,
+        draw_id: data.draw_id,
+        judge_id: data.judge_id,
+        gov_team_rank: teamRanks[0],
+        opp_team_rank: teamRanks[1],
+        cg_team_rank: teamRanks[2],
+        co_team_rank: teamRanks[3],
+        gov_team_points: data.gov_team_points,
+        opp_team_points: data.opp_team_points,
+        cg_team_points: data.cg_team_points,
+        co_team_points: data.co_team_points,
+        feedback: data.feedback,
+        notes: data.notes,
+        status: 'submitted',
+        submission_time: new Date().toISOString(),
+      };
+
+      if (editingBallot) {
+        const { data: updated, error } = await supabase
+          .from('ballots')
+          .update(ballotPayload)
+          .eq('id', ballotId)
+          .select()
+          .single();
+        if (error) throw error;
+        ballotData = updated;
+      } else {
+        const { data: inserted, error } = await supabase
+          .from('ballots')
+          .insert(ballotPayload)
+          .select()
+          .single();
+        if (error) throw error;
+        ballotData = inserted;
+      }
       
       // Insert speaker scores
       if (data.speaker_scores && data.speaker_scores.length > 0) {
-        const speakerScoresData = data.speaker_scores.map((score, index) => ({
+        const validSpeakerScoresData = data.speaker_scores.map((score, index) => ({
           ballot_id: ballotData.id,
           team_id: getTeamIdForSpeakerIndex(index),
           speaker_position: getSpeakerPositionForIndex(index),
@@ -207,11 +296,11 @@ export function BallotEntryForm({
           delivery_score: score.delivery_score,
           strategy_score: score.strategy_score,
           feedback: score.feedback
-        }));
+        })).filter(s => s.team_id && s.team_id !== '');
         
         const { error: scoresError } = await supabase
           .from('speaker_scores')
-          .insert(speakerScoresData);
+          .insert(validSpeakerScoresData);
         
         if (scoresError) throw scoresError;
       }
@@ -247,12 +336,21 @@ export function BallotEntryForm({
     return (index % 2) + 1; // 1 or 2
   };
   
+  // Replace rank number with ordinal string in the rank summary
+  const ordinal = (n: number) => {
+    if (n === 1) return '1st';
+    if (n === 2) return '2nd';
+    if (n === 3) return '3rd';
+    if (n === 4) return '4th';
+    return `${n}th`;
+  };
+  
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
+    <Card className="w-full max-w-5xl mx-auto shadow-lg border-2 border-gray-100">
+      <CardHeader className="bg-gray-50 rounded-t-lg">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Gavel className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-2xl font-bold">
+            <Gavel className="h-6 w-6" />
             Manual Ballot Entry
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -260,10 +358,10 @@ export function BallotEntryForm({
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      <CardContent className="space-y-8 p-8">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8">
           {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <Label htmlFor="round_id">Round</Label>
               <Select value={watch('round_id')} onValueChange={(value) => setValue('round_id', value)}>
@@ -290,7 +388,12 @@ export function BallotEntryForm({
                   <SelectValue placeholder="Select a room..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {draws.map((draw) => (
+                  {/* Filter draws by selected round and deduplicate by room name */}
+                  {[...new Map(
+                    draws
+                      .filter(draw => draw.round_id === watch('round_id'))
+                      .map(draw => [draw.room, draw])
+                  ).values()].map(draw => (
                     <SelectItem key={draw.id} value={draw.id}>
                       {draw.room}
                     </SelectItem>
@@ -322,167 +425,73 @@ export function BallotEntryForm({
             </div>
           </div>
           
-          {/* Team Results */}
-          {selectedDraw && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Team Results</h3>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {/* Government Team */}
-                {selectedDraw.gov_team_id && (
-                  <div className="space-y-2">
-                    <Label>Government Team</Label>
-                    <div className="space-y-2">
-                      <div>
-                        <Label htmlFor="gov_team_rank" className="text-sm">Rank</Label>
-                        <Input
-                          id="gov_team_rank"
-                          type="number"
-                          min={1}
-                          max={4}
-                          {...register('gov_team_rank', { valueAsNumber: true })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="gov_team_points" className="text-sm">Points</Label>
-                        <Input
-                          id="gov_team_points"
-                          type="number"
-                          min={0}
-                          max={3}
-                          {...register('gov_team_points', { valueAsNumber: true })}
-                        />
-                      </div>
+          {/* BP Team Results - Always show 4 teams for BP */}
+          {selectedFormat === 'bp' && selectedDraw && (
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold mb-2">Speaker Scores</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {BP_POSITIONS.map((pos, idx) => {
+                  const teamId = selectedDraw[`${pos.key.toLowerCase()}_team_id` as keyof Draw] as string | undefined;
+                  const team = teams.find(t => t.id === teamId);
+                  const speakerIndices = [idx * 2, idx * 2 + 1];
+                  return (
+                    <div key={pos.key} className={`rounded-lg shadow p-4 border-2 ${pos.color} flex flex-col gap-2`}>
+                      <div className="font-bold text-lg mb-1">{pos.label} Speakers</div>
+                      {speakerIndices.map((sIdx) => (
+                        <div key={sIdx} className="mb-4">
+                          <Label className="text-xs">Speaker Name</Label>
+                          <Input
+                            className="mb-1"
+                            {...register(`speaker_scores.${sIdx}.speaker_name` as any)}
+                          />
+                          <Label className="text-xs">Overall Score (50-100)</Label>
+                          <Input
+                            type="number"
+                            min={50}
+                            max={100}
+                            className="mb-1"
+                            {...register(`speaker_scores.${sIdx}.score` as any, { valueAsNumber: true })}
+                          />
+                          <Label className="text-xs">Feedback</Label>
+                          <Textarea
+                            rows={2}
+                            className="mb-2"
+                            {...register(`speaker_scores.${sIdx}.feedback` as any)}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                )}
-                
-                {/* Opposition Team */}
-                {selectedDraw.opp_team_id && (
-                  <div className="space-y-2">
-                    <Label>Opposition Team</Label>
-                    <div className="space-y-2">
-                      <div>
-                        <Label htmlFor="opp_team_rank" className="text-sm">Rank</Label>
-                        <Input
-                          id="opp_team_rank"
-                          type="number"
-                          min={1}
-                          max={4}
-                          {...register('opp_team_rank', { valueAsNumber: true })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="opp_team_points" className="text-sm">Points</Label>
-                        <Input
-                          id="opp_team_points"
-                          type="number"
-                          min={0}
-                          max={3}
-                          {...register('opp_team_points', { valueAsNumber: true })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Closing Government Team */}
-                {selectedDraw.cg_team_id && (
-                  <div className="space-y-2">
-                    <Label>Closing Government</Label>
-                    <div className="space-y-2">
-                      <div>
-                        <Label htmlFor="cg_team_rank" className="text-sm">Rank</Label>
-                        <Input
-                          id="cg_team_rank"
-                          type="number"
-                          min={1}
-                          max={4}
-                          {...register('cg_team_rank', { valueAsNumber: true })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="cg_team_points" className="text-sm">Points</Label>
-                        <Input
-                          id="cg_team_points"
-                          type="number"
-                          min={0}
-                          max={3}
-                          {...register('cg_team_points', { valueAsNumber: true })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Closing Opposition Team */}
-                {selectedDraw.co_team_id && (
-                  <div className="space-y-2">
-                    <Label>Closing Opposition</Label>
-                    <div className="space-y-2">
-                      <div>
-                        <Label htmlFor="co_team_rank" className="text-sm">Rank</Label>
-                        <Input
-                          id="co_team_rank"
-                          type="number"
-                          min={1}
-                          max={4}
-                          {...register('co_team_rank', { valueAsNumber: true })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="co_team_points" className="text-sm">Points</Label>
-                        <Input
-                          id="co_team_points"
-                          type="number"
-                          min={0}
-                          max={3}
-                          {...register('co_team_points', { valueAsNumber: true })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
             </div>
           )}
           
-          {/* Speaker Scores */}
-          {watch('speaker_scores')?.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Speaker Scores</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {watch('speaker_scores').map((speaker, index) => (
-                  <div key={index} className="p-4 border rounded-lg space-y-3">
-                    <div>
-                      <Label htmlFor={`speaker_scores.${index}.speaker_name`}>Speaker Name</Label>
-                      <Input
-                        id={`speaker_scores.${index}.speaker_name`}
-                        {...register(`speaker_scores.${index}.speaker_name` as any)}
-                      />
+          {/* BP Team Rank Summary - visually at bottom */}
+          {selectedFormat === 'bp' && selectedDraw && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-2">Team Rankings (Auto-calculated)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {BP_POSITIONS.map((pos, idx) => {
+                  const teamId = selectedDraw[`${pos.key.toLowerCase()}_team_id` as keyof Draw] as string | undefined;
+                  const team = teams.find(t => t.id === teamId);
+                  return (
+                    <div key={pos.key} className={`rounded-lg shadow p-4 border-2 ${pos.color} flex flex-col items-center`}>
+                      <div className="font-bold text-lg mb-1">{pos.label}</div>
+                      <div className="text-sm text-gray-700 mb-2">{team ? team.name : <span className="italic text-gray-400">TBD</span>}</div>
+                      <div className="text-2xl font-bold mb-1">{teamTotals[idx]}</div>
+                      <div className="text-lg font-semibold">Rank: <span className="text-blue-700">{ordinal(teamRanks[idx])}</span></div>
                     </div>
-                    <div>
-                      <Label htmlFor={`speaker_scores.${index}.score`}>Overall Score (50-100)</Label>
-                      <Input
-                        id={`speaker_scores.${index}.score`}
-                        type="number"
-                        min={50}
-                        max={100}
-                        {...register(`speaker_scores.${index}.score` as any, { valueAsNumber: true })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`speaker_scores.${index}.feedback`}>Feedback</Label>
-                      <Textarea
-                        id={`speaker_scores.${index}.feedback`}
-                        rows={2}
-                        {...register(`speaker_scores.${index}.feedback` as any)}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+              <div className="text-center text-gray-500 mt-2">Ranks are based on total speaker scores. Please confirm before submitting.</div>
             </div>
+          )}
+          
+          {/* Other formats fallback */}
+          {selectedFormat !== 'bp' && (
+            <></>
           )}
           
           {/* General Feedback */}
@@ -511,11 +520,11 @@ export function BallotEntryForm({
           </div>
           
           {/* Submit Button */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 mt-8">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg">
               {isSubmitting ? (
                 <LoadingSpinner size="sm" className="mr-2" />
               ) : (

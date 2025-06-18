@@ -303,17 +303,24 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
 
   const handleAcceptDraws = async () => {
     try {
-      // Update all draws for this round to 'in_progress' status
+      // Delete any previously accepted/in_progress draws for this round
+      const { error: deleteError } = await supabase
+        .from('draws')
+        .delete()
+        .eq('round_id', selectedRoundId)
+        .eq('status', 'in_progress');
+      if (deleteError) throw deleteError;
+
+      // Update all current draws for this round to 'in_progress' status
       const { error } = await supabase
         .from('draws')
         .update({ status: 'in_progress' })
-        .eq('round_id', selectedRoundId);
-        
+        .eq('round_id', selectedRoundId)
+        .eq('status', 'pending');
       if (error) throw error;
-      
+
       setIsAccepted(true);
       toast.success('Draws accepted and published!');
-      
       // Refresh the draws
       if (props.onGenerateDraws) {
         await props.onGenerateDraws(selectedRoundId);
@@ -498,9 +505,13 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
               </Button>
             </div>
           )}
-          
-          {isAccepted && (
-            <div className="mt-4 text-green-700 font-semibold">Draws have been accepted and are now public.</div>
+          {/* Show disabled button if accepted */}
+          {!props.publicMode && isAccepted && (
+            <div className="flex gap-4 mt-6">
+              <Button disabled className="bg-green-600 text-white opacity-80 cursor-not-allowed">
+                <CheckCircle className="mr-2 h-4 w-4" /> Draws Accepted
+              </Button>
+            </div>
           )}
         </div>
       ) : (
