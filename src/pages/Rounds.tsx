@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeader from "@/components/layout/PageHeader";
@@ -59,8 +58,17 @@ const Rounds = () => {
 
   const handleGenerateDraws = async (roundId: string) => {
     try {
-      const rooms = Array.from({ length: Math.ceil(teams.length / 4) }, (_, i) => `Room ${i + 1}`);
-      await generateDrawsWithHistory(roundId, teams, rooms);
+      // Find the round to get its rooms
+      const round = rounds.find(r => r.id === roundId);
+      if (!round) {
+        throw new Error('Round not found');
+      }
+
+      // Use the rooms from the round, or fallback to default if not set
+      const rooms = round.rooms || ['Room 1'];
+      const format = tournament?.format || 'bp';
+
+      await generateDrawsWithHistory(roundId, teams, rooms, format);
     } catch (error) {
       console.error('Error generating draws:', error);
     }

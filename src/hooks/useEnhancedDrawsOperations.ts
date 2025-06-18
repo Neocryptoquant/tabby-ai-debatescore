@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Round, Team, Judge, Draw } from '@/types/tournament';
@@ -34,7 +33,8 @@ export const useEnhancedDrawsOperations = (
   const generateDrawsWithHistory = async (
     roundId: string,
     teamsToUse: Team[],
-    rooms: string[]
+    rooms: string[],
+    format: string // 'bp', 'wsdc', etc.
   ) => {
     if (!tournamentId) {
       throw new Error('Tournament ID is required');
@@ -62,34 +62,58 @@ export const useEnhancedDrawsOperations = (
         throw deleteError;
       }
 
-      // Validate we have enough teams
-      if (teamsToUse.length % 2 !== 0) {
-        console.warn('Odd number of teams, one team will have a bye');
-      }
-
-      // Generate new draws
-      const drawsToInsert = [];
+      // Shuffle teams
       const shuffledTeams = [...teamsToUse].sort(() => Math.random() - 0.5);
-      const numRooms = Math.floor(shuffledTeams.length / 2);
+      const isBP = format === 'bp';
+      const teamsPerRoom = isBP ? 4 : 2;
+      const numRooms = rooms.length;
+      const drawsToInsert = [];
       
       console.log('Creating', numRooms, 'debates');
+      console.log('Teams per room:', teamsPerRoom);
+      console.log('Total teams available:', shuffledTeams.length);
       
       for (let i = 0; i < numRooms; i++) {
-        const govTeam = shuffledTeams[i * 2];
-        const oppTeam = shuffledTeams[i * 2 + 1];
+        const roomTeams = [];
+        for (let j = 0; j < teamsPerRoom; j++) {
+          const teamIndex = i * teamsPerRoom + j;
+          if (teamIndex < shuffledTeams.length) {
+            roomTeams.push(shuffledTeams[teamIndex]);
+          } else {
+            // Add swing team if not enough real teams
+            roomTeams.push({
+              id: `swing-${i}-${j}`,
+              tournament_id: tournamentId,
+              name: `Swing Team ${String.fromCharCode(65 + j)}`,
+              institution: 'Swing'
+            });
+          }
+        }
         
-        if (govTeam && oppTeam) {
-          const roomName = rooms[i] || `Room ${i + 1}`;
-          const assignedJudge = judges[i % judges.length];
-          
+        console.log(`Room ${i + 1} (${rooms[i]}):`, roomTeams.map(t => t.name));
+        
+        if (isBP) {
           drawsToInsert.push({
             round_id: roundId,
             tournament_id: tournamentId,
-            room: roomName,
-            gov_team_id: govTeam.id,
-            opp_team_id: oppTeam.id,
-            judge_id: assignedJudge?.id || null,
-            judge: assignedJudge?.name || null,
+            room: rooms[i],
+            gov_team_id: roomTeams[0]?.id,
+            opp_team_id: roomTeams[1]?.id,
+            cg_team_id: roomTeams[2]?.id,
+            co_team_id: roomTeams[3]?.id,
+            judge_id: judges[i % judges.length]?.id || null,
+            judge: judges[i % judges.length]?.name || null,
+            status: 'pending'
+          });
+        } else {
+          drawsToInsert.push({
+            round_id: roundId,
+            tournament_id: tournamentId,
+            room: rooms[i],
+            gov_team_id: roomTeams[0]?.id,
+            opp_team_id: roomTeams[1]?.id,
+            judge_id: judges[i % judges.length]?.id || null,
+            judge: judges[i % judges.length]?.name || null,
             status: 'pending'
           });
         }
@@ -124,7 +148,8 @@ export const useEnhancedDrawsOperations = (
           generation_params: {
             teams_count: teamsToUse.length,
             rooms_count: rooms.length,
-            judges_count: judges.length
+            judges_count: judges.length,
+            format
           },
           is_current: true
         });

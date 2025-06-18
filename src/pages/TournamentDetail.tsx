@@ -56,6 +56,9 @@ interface EnhancedRoundFormData {
   motion: string;
   info_slide?: string;
   start_time?: string;
+  rooms?: string[];
+  is_motion_public?: boolean;
+  is_info_slide_public?: boolean;
 }
 
 const TournamentDetail = () => {
@@ -155,7 +158,10 @@ const TournamentDetail = () => {
         motion: roundData.motion,
         info_slide: roundData.info_slide || '',
         start_time: roundData.start_time || null,
-        status: 'upcoming'
+        status: 'upcoming',
+        rooms: roundData.rooms || ['Room A'],
+        is_motion_public: roundData.is_motion_public || false,
+        is_info_slide_public: roundData.is_info_slide_public || false
       });
       toast.dismiss();
       toast.success('Round created successfully!');
@@ -214,43 +220,36 @@ const TournamentDetail = () => {
   };
 
   const handleGenerateDraws = async (roundId: string) => {
-    console.log('Generating draws for round:', roundId);
-    console.log('Current teams:', teams);
-    console.log('Number of teams:', teams?.length);
-
-    if (!teams || !Array.isArray(teams)) {
-      console.error('Teams is not an array:', teams);
-      toast.error('Invalid teams data');
+    if (teams.length < 2) {
+      toast.error('Need at least 2 teams to generate draws');
       return;
     }
 
-    // Determine minimum teams required based on format
-    const format = tournament?.format || 'bp';
-    const minTeamsRequired = format === 'bp' ? 4 : 2;
-    
-    if (teams.length < minTeamsRequired) {
-      console.error('Not enough teams:', teams.length);
-      toast.error(`Need at least ${minTeamsRequired} teams to generate ${format.toUpperCase()} draws`);
+    if (judges.length === 0) {
+      toast.error('Need at least 1 judge to generate draws');
       return;
     }
 
+    setIsGeneratingDraws(true);
     try {
-      setIsGeneratingDraws(true);
       toast.loading('Generating draws...');
 
-      // Get the round data
+      // Find the round to get its rooms
       const round = rounds.find(r => r.id === roundId);
       if (!round) {
         throw new Error('Round not found');
       }
 
-      // Generate rooms based on format
-      const teamsPerRoom = format === 'bp' ? 4 : 2;
-      const numRooms = Math.floor(teams.length / teamsPerRoom);
-      const rooms = Array.from({ length: numRooms }, (_, i) => `Room ${i + 1}`);
+      // Use the rooms from the round, or fallback to default if not set
+      const rooms = round.rooms || ['Room 1'];
+      const format = tournament?.format || 'bp';
 
-      // Use the enhanced draw generation
-      await generateDrawsWithHistory(roundId, teams, rooms);
+      console.log('Generating draws for round:', roundId);
+      console.log('Using rooms:', rooms);
+      console.log('Format:', format);
+
+      // Use the enhanced draw generation with format parameter
+      await generateDrawsWithHistory(roundId, teams, rooms, format);
       
       toast.dismiss();
       toast.success(`${format.toUpperCase()} draws generated successfully!`);
@@ -708,6 +707,9 @@ const TournamentDetail = () => {
               <EnhancedRoundForm 
                 onSave={handleAddRound} 
                 isLoading={isLoading}
+                tournamentFormat={tournament?.format as any}
+                teamCount={teams?.length || 0}
+                existingRounds={rounds?.map(r => r.round_number) || []}
               />
             )}
             <RoundsList 

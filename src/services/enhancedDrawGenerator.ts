@@ -107,30 +107,23 @@ export class EnhancedDrawGenerator {
     const draws: DrawRoom[] = [];
     const shuffledTeams = this.shuffleArray(this.teams);
     
-    // Use only the number of rooms specified, not calculated from team count
-    const numRooms = Math.min(this.rooms.length, Math.ceil(shuffledTeams.length / 4));
-    
-    console.log(`Generating BP draws: ${this.teams.length} teams, ${numRooms} rooms`);
+    // Always use the user-specified number of rooms
+    const numRooms = this.rooms.length;
+    const teamsPerRoom = 4;
 
-    // Generate draws for each room
     for (let roomIndex = 0; roomIndex < numRooms; roomIndex++) {
-      // Get 4 teams for this room, or create swing teams if needed
       const roomTeams: Team[] = [];
-      
-      // Try to get 4 real teams first
-      for (let i = 0; i < 4; i++) {
-        const teamIndex = roomIndex * 4 + i;
+      for (let i = 0; i < teamsPerRoom; i++) {
+        const teamIndex = roomIndex * teamsPerRoom + i;
         if (teamIndex < shuffledTeams.length) {
           roomTeams.push(shuffledTeams[teamIndex]);
         } else {
-          // Create a swing team if we don't have enough real teams
-          roomTeams.push(this.createSwingTeam(roomTeams.length));
+          // Create swing team if not enough real teams
+          roomTeams.push(this.createSwingTeam(i));
         }
       }
-      
       // Optimize team arrangement to minimize institution clashes
       const optimizedTeams = this.optimizeTeamArrangement(roomTeams);
-      
       const drawRoom: DrawRoom = {
         id: `room-${roomIndex + 1}`,
         room: this.rooms[roomIndex] || `Room ${roomIndex + 1}`,
@@ -142,15 +135,11 @@ export class EnhancedDrawGenerator {
         },
         judge: this.allocateJudge(roomIndex)
       };
-
       draws.push(drawRoom);
-
       // Track this pairing
       const pairingKey = optimizedTeams.map(t => t.id).sort().join('-');
       this.usedPairings.add(pairingKey);
     }
-
-    console.log(`Generated ${draws.length} BP rooms`);
     return draws;
   }
 

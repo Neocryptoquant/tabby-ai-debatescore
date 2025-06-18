@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -7,7 +6,7 @@ import { Round } from '@/types/tournament';
 export interface EnhancedRound extends Round {
   is_motion_public?: boolean;
   is_info_slide_public?: boolean;
-  default_rooms?: string[];
+  rooms?: string[];
 }
 
 export const useEnhancedRoundsOperations = (tournamentId?: string) => {
@@ -37,7 +36,7 @@ export const useEnhancedRoundsOperations = (tournamentId?: string) => {
         status: (round.status as 'upcoming' | 'active' | 'completed') || 'upcoming',
         is_motion_public: round.is_motion_public || false,
         is_info_slide_public: round.is_info_slide_public || false,
-        default_rooms: round.default_rooms || [],
+        rooms: round.default_rooms || ['Room A'],
         created_at: round.created_at,
         updated_at: round.updated_at
       }));
@@ -73,7 +72,7 @@ export const useEnhancedRoundsOperations = (tournamentId?: string) => {
         status: (data.status as 'upcoming' | 'active' | 'completed') || 'upcoming',
         is_motion_public: data.is_motion_public || false,
         is_info_slide_public: data.is_info_slide_public || false,
-        default_rooms: data.default_rooms || [],
+        rooms: data.default_rooms || ['Room A'],
         created_at: data.created_at,
         updated_at: data.updated_at
       };
@@ -85,6 +84,45 @@ export const useEnhancedRoundsOperations = (tournamentId?: string) => {
     } catch (error) {
       console.error('Error adding round:', error);
       toast.error('Failed to add round');
+      throw error;
+    }
+  };
+
+  const updateRound = async (roundId: string, roundData: Partial<Omit<EnhancedRound, 'id' | 'tournament_id' | 'created_at' | 'updated_at'>>) => {
+    try {
+      const { data, error } = await supabase
+        .from('rounds')
+        .update(roundData)
+        .eq('id', roundId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      const typedRound: EnhancedRound = {
+        id: data.id,
+        tournament_id: data.tournament_id,
+        round_number: data.round_number,
+        motion: data.motion,
+        info_slide: data.info_slide || undefined,
+        start_time: data.start_time || undefined,
+        status: (data.status as 'upcoming' | 'active' | 'completed') || 'upcoming',
+        is_motion_public: data.is_motion_public || false,
+        is_info_slide_public: data.is_info_slide_public || false,
+        rooms: data.default_rooms || ['Room A'],
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+      
+      setRounds(prev => prev.map(round => 
+        round.id === roundId ? typedRound : round
+      ).sort((a, b) => a.round_number - b.round_number));
+      
+      toast.success('🎯 Round updated successfully!');
+      return typedRound;
+    } catch (error) {
+      console.error('Error updating round:', error);
+      toast.error('Failed to update round');
       throw error;
     }
   };
@@ -136,6 +174,7 @@ export const useEnhancedRoundsOperations = (tournamentId?: string) => {
     isLoading,
     fetchRounds,
     addRound,
+    updateRound,
     updateRoundPrivacy,
     deleteRound
   };

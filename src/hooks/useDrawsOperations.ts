@@ -1,7 +1,7 @@
-
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Round, Team } from '@/types/tournament';
+import { EnhancedDrawGenerator } from '@/services/enhancedDrawGenerator';
 
 /**
  * Custom hook for draw generation and management operations
@@ -35,31 +35,55 @@ export const useDrawsOperations = (
       }
 
       const newDraws = [];
-      const availableRooms = ['Room A', 'Room B', 'Room C', 'Room D', 'Room E', 'Room F', 'Room G', 'Room H'];
 
       for (const round of rounds) {
-        const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
+        // Use round-specific rooms if available, otherwise fallback to default
+        const roundRooms = round.rooms || ['Room A', 'Room B', 'Room C', 'Room D'];
         
-        for (let i = 0; i < shuffledTeams.length; i += 2) {
-          if (i + 1 < shuffledTeams.length) {
-            newDraws.push({
-              round_id: round.id,
-              room: availableRooms[Math.floor(i / 2)] || `Room ${Math.floor(i / 2) + 1}`,
-              gov_team_id: shuffledTeams[i].id,
-              opp_team_id: shuffledTeams[i + 1].id,
-              status: 'pending' as const
-            });
-          }
+        try {
+          // Create draw generator for this round
+          const drawGenerator = new EnhancedDrawGenerator(
+            teams,
+            [], // No judges for now - can be enhanced later
+            roundRooms,
+            {
+              method: 'random',
+              avoidInstitutionClashes: true,
+              balanceExperience: true
+            }
+          );
+
+          // Generate draws for this round
+          const drawRooms = drawGenerator.generateDraws();
+          
+          // Convert to database format
+          const roundDraws = drawGenerator.convertToDraws(
+            drawRooms, 
+            round.id, 
+            tournamentId
+          );
+          
+          newDraws.push(...roundDraws);
+          
+        } catch (error) {
+          console.error(`Error generating draws for round ${round.round_number}:`, error);
+          toast.error(`Failed to generate draws for Round ${round.round_number}`, {
+            description: error instanceof Error ? error.message : 'Unknown error',
+            duration: 4000,
+          });
+          // Continue with other rounds
         }
       }
 
-      const { error: insertError } = await supabase
-        .from('draws')
-        .insert(newDraws);
+      if (newDraws.length > 0) {
+        const { error: insertError } = await supabase
+          .from('draws')
+          .insert(newDraws);
 
-      if (insertError) {
-        console.error('Error inserting new draws:', insertError);
-        throw insertError;
+        if (insertError) {
+          console.error('Error inserting new draws:', insertError);
+          throw insertError;
+        }
       }
       
       if (fetchDraws) {

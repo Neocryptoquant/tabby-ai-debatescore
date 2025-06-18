@@ -29,6 +29,9 @@ export interface Round {
   info_slide?: string;
   start_time?: string;
   status: 'upcoming' | 'active' | 'completed';
+  rooms?: string[]; // Array of room names for this round
+  is_motion_public?: boolean;
+  is_info_slide_public?: boolean;
   created_at?: string;
   updated_at?: string;
 }
