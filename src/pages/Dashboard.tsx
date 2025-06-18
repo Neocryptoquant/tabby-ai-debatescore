@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Trophy, Users, Calendar, BarChart3, Plus, Activity } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -111,14 +110,22 @@ const Dashboard = () => {
         title="Dashboard"
         description="Welcome back to TabbyAI!"
         actions={
-          canCreateTournaments ? (
-            <Link to="/tournaments/create">
-              <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
-                <Plus className="h-4 w-4 mr-2" />
-                New Tournament
+          <div className="flex gap-2">
+            {canCreateTournaments && (
+              <Link to="/tournaments/create">
+                <Button className="bg-tabby-secondary hover:bg-tabby-secondary/90">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Tournament
+                </Button>
+              </Link>
+            )}
+            <Link to="/standings">
+              <Button variant="outline" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Standings
               </Button>
             </Link>
-          ) : null
+          </div>
         }
       />
 

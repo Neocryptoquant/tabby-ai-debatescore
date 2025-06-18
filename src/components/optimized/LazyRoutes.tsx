@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import RoundDetail from '@/pages/RoundDetail';
 
 // Lazy load route components for better performance
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
@@ -53,3 +54,5 @@ export const LazyConfirmation = withSuspense(Confirmation);
 
 // Public components
 export const LazyPublicTournament = withSuspense(PublicTournament);
+
+export const LazyRoundDetail = withSuspense(RoundDetail);

@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,9 +17,12 @@ interface RoundsListProps {
   onEdit: (round: Round) => void;
   onDelete: (roundId: string) => void;
   isLoading?: boolean;
+  onViewRound?: (round: Round) => void;
 }
 
-export const RoundsList = ({ rounds, onEdit, onDelete, isLoading = false }: RoundsListProps) => {
+export type { RoundsListProps };
+
+export const RoundsList = ({ rounds, onEdit, onDelete, isLoading = false, onViewRound }: RoundsListProps) => {
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return "TBD";
     const date = new Date(timeStr);
@@ -83,6 +85,15 @@ export const RoundsList = ({ rounds, onEdit, onDelete, isLoading = false }: Roun
                   {round.status}
                 </Badge>
                 <div className="flex gap-1">
+                  {onViewRound && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onViewRound(round)}
+                    >
+                      View
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"

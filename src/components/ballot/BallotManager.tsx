@@ -7,7 +7,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Judge, Round, Draw, Team } from '@/types/tournament';
+import { Judge, Round, Draw, Team, Tournament } from '@/types/tournament';
 import { JudgeBallotAccess } from './JudgeBallotAccess';
 import { BallotStatusTable } from './BallotStatusTable';
 import { BallotEntryForm } from './BallotEntryForm';
@@ -19,6 +19,7 @@ interface BallotManagerProps {
   rounds: Round[];
   draws: Draw[];
   className?: string;
+  tournament?: Tournament;
 }
 
 export function BallotManager({
@@ -26,7 +27,8 @@ export function BallotManager({
   judges,
   rounds,
   draws,
-  className
+  className,
+  tournament
 }: BallotManagerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [ballots, setBallots] = useState<any[]>([]);
@@ -114,62 +116,50 @@ export function BallotManager({
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      
       if (!user) {
         toast.error('You must be logged in to confirm ballots');
         return;
       }
-      
+      // Debug log for tabmaster check
+      console.log('User ID:', user.id, 'Tournament created_by:', tournament?.created_by, 'Tournament:', tournament);
+      // Only tabmaster can confirm
+      if (!tournament || tournament.created_by !== user.id) {
+        toast.error('Only the tabmaster can confirm ballots');
+        return;
+      }
       // Get the ballot to check if the current user is the judge
       const { data: ballotData, error: ballotError } = await supabase
         .from('ballots')
         .select('judge_id')
         .eq('id', ballotId)
         .single();
-      
       if (ballotError) throw ballotError;
-      
       // Prevent judge from confirming their own ballot
       if (ballotData.judge_id === user.id) {
         toast.error('You cannot confirm your own ballot');
         return;
       }
-      
-      // Get user profile for confirmation tracking
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
-      
-      const confirmedBy = profileData?.full_name || user.email || 'Unknown';
-      
+      // Use user.id (UUID) for confirmed_by
       const { error } = await supabase
         .from('ballots')
         .update({ 
           status: 'confirmed',
           confirmed_time: new Date().toISOString(),
-          confirmed_by: confirmedBy
+          confirmed_by: user.id
         })
         .eq('id', ballotId);
-      
       if (error) throw error;
-      
       // Automatically update standings when ballot is confirmed
       try {
         const { error: standingsError } = await supabase.functions.invoke('update-standings', {
           body: { ballotId }
         });
-        
         if (standingsError) {
           console.warn('Failed to update standings automatically:', standingsError);
-          // Don't fail the confirmation if standings update fails
         }
       } catch (standingsError) {
         console.warn('Error calling standings update function:', standingsError);
-        // Don't fail the confirmation if standings update fails
       }
-      
       toast.success('Ballot confirmed successfully');
       fetchBallots(); // Refresh data
     } catch (error) {

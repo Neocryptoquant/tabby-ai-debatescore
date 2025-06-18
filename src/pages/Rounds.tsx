@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import { AIAssistant } from "@/components/ai/AIAssistant";
@@ -21,6 +21,7 @@ interface RoundFormData {
 
 const Rounds = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const {
     tournament,
     rounds,
@@ -136,6 +137,7 @@ const Rounds = () => {
                 onEdit={handleEditRound}
                 onDelete={handleDeleteRound}
                 isLoading={isLoading}
+                onViewRound={(round) => navigate(`/tournaments/${id}/rounds/${round.id}`)}
               />
             </CardContent>
           </Card>

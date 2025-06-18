@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "sonner";
@@ -26,6 +25,7 @@ import {
   LazyCallback,
   LazyConfirmation,
   LazyPublicTournament,
+  LazyRoundDetail,
 } from "@/components/optimized/LazyRoutes";
 
 // Ballot components
@@ -152,6 +152,8 @@ function App() {
                     <LazyAIAnalysis />
                   </ProtectedRoute>
                 } />
+                
+                <Route path="/tournaments/:tournamentId/rounds/:roundId" element={<ProtectedRoute><LazyRoundDetail /></ProtectedRoute>} />
                 
                 {/* Catch all route */}
                 <Route path="*" element={<NotFound />} />

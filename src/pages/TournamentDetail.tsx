@@ -501,14 +501,20 @@ const TournamentDetail = () => {
         title={tournament.name}
         description={tournament.description || `${format.toUpperCase()} Tournament`}
         actions={
-          canEdit ? (
-            <div className="flex gap-2">
+          <div className="flex gap-2">
+            <Link to={`/standings?id=${id}`}>
+              <Button variant="outline" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Standings
+              </Button>
+            </Link>
+            {canEdit && (
               <Button onClick={handleEditTournament} variant="outline">
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Tournament
               </Button>
-            </div>
-          ) : null
+            )}
+          </div>
         }
       />
 
@@ -741,10 +747,11 @@ const TournamentDetail = () => {
 
           <TabsContent value="ballots">
             <BallotManager
-              tournamentId={id!}
+              tournamentId={tournament.id}
               judges={judges}
               rounds={rounds}
               draws={draws}
+              tournament={tournament}
             />
           </TabsContent>
 
