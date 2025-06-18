@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -57,27 +56,43 @@ export function BallotStatusTable({
     const roundDraws = draws.filter(d => d.round_id === roundId);
     const roundBallots = ballots.filter(b => b.draw?.round_id === roundId);
     
-    const submittedBallots = roundBallots.filter(b => 
-      b.status === 'submitted' || b.status === 'confirmed'
-    );
+    // Only count confirmed ballots for completion percentage
+    const confirmedBallots = roundBallots.filter(b => b.status === 'confirmed');
     
     if (roundDraws.length === 0) return 0;
-    return Math.round((submittedBallots.length / roundDraws.length) * 100);
+    return Math.round((confirmedBallots.length / roundDraws.length) * 100);
+  };
+  
+  // Check if round can be completed (all ballots must be confirmed)
+  const canCompleteRound = (roundId: string) => {
+    const roundDraws = draws.filter(d => d.round_id === roundId);
+    const roundBallots = ballots.filter(b => b.draw?.round_id === roundId);
+    
+    // All draws must have confirmed ballots
+    const confirmedBallots = roundBallots.filter(b => b.status === 'confirmed');
+    const hasAllConfirmedBallots = confirmedBallots.length === roundDraws.length;
+    
+    // Check if there are any unconfirmed ballots (submitted but not confirmed)
+    const unconfirmedBallots = roundBallots.filter(b => 
+      b.status === 'submitted' || b.status === 'draft'
+    );
+    
+    return hasAllConfirmedBallots && unconfirmedBallots.length === 0;
   };
   
   // Get status badge for a ballot
   const getBallotStatusBadge = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return <Badge className="bg-green-100 text-green-800">Confirmed</Badge>;
+        return <Badge className="bg-green-100 text-green-800">✓ Confirmed</Badge>;
       case 'submitted':
-        return <Badge className="bg-blue-100 text-blue-800">Submitted</Badge>;
+        return <Badge className="bg-orange-100 text-orange-800">⏳ Awaiting Confirmation</Badge>;
       case 'draft':
-        return <Badge className="bg-yellow-100 text-yellow-800">Draft</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800">📝 Draft</Badge>;
       case 'discarded':
-        return <Badge className="bg-red-100 text-red-800">Discarded</Badge>;
+        return <Badge className="bg-red-100 text-red-800">❌ Discarded</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800">Unknown</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">❓ Unknown</Badge>;
     }
   };
   
@@ -156,14 +171,34 @@ export function BallotStatusTable({
                         <Badge className="bg-yellow-100 text-yellow-800">Upcoming</Badge>
                       )}
                     </div>
-                    {roundStatus === 'active' && completionPercentage === 100 && onCompleteRound && (
+                    {roundStatus === 'active' && canCompleteRound(roundId) && onCompleteRound && (
                       <Button
                         size="sm"
                         onClick={() => onCompleteRound(roundId)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Complete Round
                       </Button>
+                    )}
+                    {roundStatus === 'active' && !canCompleteRound(roundId) && (
+                      <div className="text-sm text-gray-500">
+                        {(() => {
+                          const roundDraws = draws.filter(d => d.round_id === roundId);
+                          const roundBallots = ballots.filter(b => b.draw?.round_id === roundId);
+                          const confirmedBallots = roundBallots.filter(b => b.status === 'confirmed');
+                          const unconfirmedBallots = roundBallots.filter(b => 
+                            b.status === 'submitted' || b.status === 'draft'
+                          );
+                          
+                          if (confirmedBallots.length < roundDraws.length) {
+                            return `${roundDraws.length - confirmedBallots.length} ballots need confirmation`;
+                          } else if (unconfirmedBallots.length > 0) {
+                            return `${unconfirmedBallots.length} ballots pending confirmation`;
+                          }
+                          return 'Cannot complete round';
+                        })()}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -175,6 +210,7 @@ export function BallotStatusTable({
                       <TableHead>Judge</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Submitted</TableHead>
+                      <TableHead>Confirmed</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -193,6 +229,25 @@ export function BallotStatusTable({
                           {ballot.submission_time
                             ? formatDate(ballot.submission_time)
                             : 'Not submitted'}
+                        </TableCell>
+                        <TableCell>
+                          {ballot.status === 'confirmed' ? (
+                            <div>
+                              <div className="text-sm font-medium text-green-700">Confirmed</div>
+                              {ballot.confirmed_time && (
+                                <div className="text-xs text-gray-500">
+                                  {formatDate(ballot.confirmed_time)}
+                                </div>
+                              )}
+                              {ballot.confirmed_by && (
+                                <div className="text-xs text-gray-500">
+                                  by {ballot.confirmed_by}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">Not confirmed</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">

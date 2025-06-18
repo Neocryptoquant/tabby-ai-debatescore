@@ -83,11 +83,12 @@ export function BallotManager({
       const submitted = ballotsData?.filter(b => b.status === 'submitted').length || 0;
       const confirmed = ballotsData?.filter(b => b.status === 'confirmed').length || 0;
       const draft = ballotsData?.filter(b => b.status === 'draft').length || 0;
+      const pendingConfirmation = submitted; // Submitted ballots awaiting confirmation
       const missing = total - submitted - confirmed - draft;
       
       setBallotStats({
         total,
-        submitted,
+        submitted: pendingConfirmation, // Rename to be clearer
         confirmed,
         draft,
         missing: Math.max(0, missing)
@@ -111,15 +112,63 @@ export function BallotManager({
   // Confirm a ballot
   const confirmBallot = async (ballotId: string) => {
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error('You must be logged in to confirm ballots');
+        return;
+      }
+      
+      // Get the ballot to check if the current user is the judge
+      const { data: ballotData, error: ballotError } = await supabase
+        .from('ballots')
+        .select('judge_id')
+        .eq('id', ballotId)
+        .single();
+      
+      if (ballotError) throw ballotError;
+      
+      // Prevent judge from confirming their own ballot
+      if (ballotData.judge_id === user.id) {
+        toast.error('You cannot confirm your own ballot');
+        return;
+      }
+      
+      // Get user profile for confirmation tracking
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      
+      const confirmedBy = profileData?.full_name || user.email || 'Unknown';
+      
       const { error } = await supabase
         .from('ballots')
         .update({ 
           status: 'confirmed',
-          confirmed_time: new Date().toISOString()
+          confirmed_time: new Date().toISOString(),
+          confirmed_by: confirmedBy
         })
         .eq('id', ballotId);
       
       if (error) throw error;
+      
+      // Automatically update standings when ballot is confirmed
+      try {
+        const { error: standingsError } = await supabase.functions.invoke('update-standings', {
+          body: { ballotId }
+        });
+        
+        if (standingsError) {
+          console.warn('Failed to update standings automatically:', standingsError);
+          // Don't fail the confirmation if standings update fails
+        }
+      } catch (standingsError) {
+        console.warn('Error calling standings update function:', standingsError);
+        // Don't fail the confirmation if standings update fails
+      }
       
       toast.success('Ballot confirmed successfully');
       fetchBallots(); // Refresh data
@@ -221,7 +270,7 @@ export function BallotManager({
                   </div>
                   <div className="bg-blue-50 p-4 rounded-lg text-center">
                     <div className="text-2xl font-bold text-blue-700">{ballotStats.submitted}</div>
-                    <div className="text-sm text-blue-600">Submitted</div>
+                    <div className="text-sm text-blue-600">Pending Confirmation</div>
                   </div>
                   <div className="bg-yellow-50 p-4 rounded-lg text-center">
                     <div className="text-2xl font-bold text-yellow-700">{ballotStats.draft}</div>
@@ -249,6 +298,24 @@ export function BallotManager({
                       <Plus className="h-4 w-4 mr-2" />
                       Enter Ballot
                     </Button>
+                  </div>
+                </div>
+
+                {/* Ballot Confirmation Workflow */}
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-green-900 mb-2">Ballot Confirmation Workflow</h3>
+                      <div className="text-sm text-green-800 space-y-1">
+                        <p>• <strong>Submitted</strong> ballots must be confirmed by a different person</p>
+                        <p>• <strong>Confirmed</strong> ballots automatically update team standings and speaker scores</p>
+                        <p>• Rounds can only be completed when all ballots are confirmed</p>
+                        <p>• Judges cannot confirm their own ballots</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
