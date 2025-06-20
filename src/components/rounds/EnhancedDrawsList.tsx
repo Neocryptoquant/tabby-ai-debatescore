@@ -318,7 +318,7 @@ export function EnhancedDrawsList(props: EnhancedDrawsListProps) {
         .eq('round_id', selectedRoundId)
         .eq('status', 'pending');
       if (error) throw error;
-
+      
       setIsAccepted(true);
       toast.success('Draws accepted and published!');
       // Refresh the draws

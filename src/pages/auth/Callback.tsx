@@ -32,43 +32,43 @@ const Callback = () => {
         }
 
         console.log("Authentication successful for user:", session.user.email);
-        
-        // Check if user profile exists
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .maybeSingle();
           
+        // Check if user profile exists
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id')
+          .eq('id', session.user.id)
+            .maybeSingle();
+            
         if (profileError) {
-          console.error("Error checking profile:", profileError);
+            console.error("Error checking profile:", profileError);
           setError("Error checking user profile. Please try again.");
           return;
-        }
-        
-        if (!profile) {
-          // Create profile from user metadata
-          const { user_metadata } = session.user;
+          }
           
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: session.user.id,
-              full_name: user_metadata?.full_name || user_metadata?.name || '',
-              avatar_url: user_metadata?.avatar_url || null,
-              institution: user_metadata?.institution || null,
-              email: session.user.email
-            });
+          if (!profile) {
+            // Create profile from user metadata
+          const { user_metadata } = session.user;
             
-          if (insertError) {
-            console.error("Error creating profile:", insertError);
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+              id: session.user.id,
+                full_name: user_metadata?.full_name || user_metadata?.name || '',
+                avatar_url: user_metadata?.avatar_url || null,
+                institution: user_metadata?.institution || null,
+              email: session.user.email
+              });
+              
+            if (insertError) {
+              console.error("Error creating profile:", insertError);
             setError("Error creating user profile. Please try again.");
             return;
           }
           
           console.log("Profile created successfully for:", session.user.email);
-        }
-        
+          }
+          
         // Set a small delay to ensure all state is updated
         setTimeout(() => {
           toast.success("Signed in successfully!");
@@ -103,7 +103,7 @@ const Callback = () => {
       </div>
     );
   }
-
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
       <Card className="max-w-md w-full">
@@ -112,14 +112,14 @@ const Callback = () => {
             <BrainCircuit className="h-12 w-12 text-tabby-secondary" />
           </div>
           <CardTitle className="text-2xl font-semibold text-center">Completing Sign In</CardTitle>
-          <CardDescription className="text-center">
+            <CardDescription className="text-center">
             Please wait while we set up your account...
-          </CardDescription>
-        </CardHeader>
+            </CardDescription>
+          </CardHeader>
         <CardContent className="flex justify-center">
           <LoadingSpinner size="lg" />
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
     </div>
   );
 };

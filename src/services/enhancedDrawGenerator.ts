@@ -110,7 +110,7 @@ export class EnhancedDrawGenerator {
     // Always use the user-specified number of rooms
     const numRooms = this.rooms.length;
     const teamsPerRoom = 4;
-
+    
     for (let roomIndex = 0; roomIndex < numRooms; roomIndex++) {
       const roomTeams: Team[] = [];
       for (let i = 0; i < teamsPerRoom; i++) {

@@ -76,13 +76,13 @@ export const useDrawsOperations = (
       }
 
       if (newDraws.length > 0) {
-        const { error: insertError } = await supabase
-          .from('draws')
-          .insert(newDraws);
+      const { error: insertError } = await supabase
+        .from('draws')
+        .insert(newDraws);
 
-        if (insertError) {
-          console.error('Error inserting new draws:', insertError);
-          throw insertError;
+      if (insertError) {
+        console.error('Error inserting new draws:', insertError);
+        throw insertError;
         }
       }
       

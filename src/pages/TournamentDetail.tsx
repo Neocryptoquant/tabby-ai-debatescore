@@ -278,7 +278,7 @@ const TournamentDetail = () => {
       toast.error('Need at least 2 teams to generate draws');
       return;
     }
-
+    
     if (judges.length === 0) {
       toast.error('Need at least 1 judge to generate draws');
       return;
@@ -286,9 +286,9 @@ const TournamentDetail = () => {
     
     setIsGeneratingDraws(true);
     try {
-      // Generate draws for the first available round
-      const firstRound = rounds[0];
-      await handleGenerateDraws(firstRound.id);
+    // Generate draws for the first available round
+    const firstRound = rounds[0];
+    await handleGenerateDraws(firstRound.id);
     } catch (error) {
       console.error('Error generating all draws:', error);
       toast.error('Failed to generate draws');
@@ -501,7 +501,7 @@ const TournamentDetail = () => {
         title={tournament.name}
         description={tournament.description || `${format.toUpperCase()} Tournament`}
         actions={
-          <div className="flex gap-2">
+            <div className="flex gap-2">
             <Link to={`/standings?id=${id}`}>
               <Button variant="outline" className="gap-2">
                 <BarChart3 className="h-4 w-4" />
@@ -514,7 +514,7 @@ const TournamentDetail = () => {
                 Edit Tournament
               </Button>
             )}
-          </div>
+            </div>
         }
       />
 
@@ -589,7 +589,7 @@ const TournamentDetail = () => {
                       {stat.description && (
                         <p className="text-sm text-gray-500 mt-1">{stat.description}</p>
                       )}
-                    </div>
+                  </div>
                   ))}
                 </div>
               </div>
@@ -727,7 +727,7 @@ const TournamentDetail = () => {
           </TabsContent>
 
           <TabsContent value="draws">
-            <DrawsList
+            <DrawsList 
               tournamentId={id!}
               roundId={rounds[0]?.id}
               teams={teams}
